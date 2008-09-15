@@ -154,7 +154,7 @@ function! s:Highlights()
 
   let i = 1
   while 1
-    if synIDtrans(i) == 0
+    if synIDtrans(i) == 0 || !len(synIDattr(synIDtrans(i), "name"))
       break
     endif
 
