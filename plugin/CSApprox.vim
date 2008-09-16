@@ -21,13 +21,18 @@
 " store them if it is not built with +gui.
 if has("gui_running") || ! has("gui") || exists('g:CSApprox_loaded')
   " XXX This depends upon knowing the default for g:CSApprox_verbose_level
-  if has('gui_running')
-    \ && exists("g:CSApprox_verbose_level") && g:CSApprox_verbose_level > 1
-      echomsg "Not loading CSApprox in gui mode."
-  elseif ! has('gui')
-    \ && (!exists("g:CSApprox_verbose_level") || g:CSApprox_verbose_level)
-      echomsg "CSApprox needs gui support - not loading."
+  let s:verbose = 1
+  if exists("g:CSApprox_verbose_level")
+    let s:verbose  = g:CSApprox_verbose_level
   endif
+
+  if has('gui_running') && s:verbose > 1
+    echomsg "Not loading CSApprox in gui mode."
+  elseif ! has('gui') && s:verbose > 0
+    echomsg "CSApprox needs gui support - not loading."
+  endif
+
+  unlet s:verbose
 
   finish
 endif
