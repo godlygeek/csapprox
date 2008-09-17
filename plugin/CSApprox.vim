@@ -76,39 +76,63 @@ endfunc
 " this color is used, otherwise we repeat the search with the greys removed,
 " meaning that the three new matches must make a valid color when combined.
 function! s:ApproximatePerComponent(r,g,b)
+  let hex = printf("%02x%02x%02x", a:r, a:g, a:b)
+
   let greys  = (&t_Co == 88 ? s:urxvt_greys : s:xterm_greys)
 
   if &t_Co == 88
     let colors = s:urxvt_colors
+    let type = 'urxvt'
   elseif ((&term ==# 'xterm' || &term =~# '^screen')
        \   && exists('g:CSApprox_konsole'))
        \ || &term =~? '^konsole'
     let colors = s:konsole_colors
+    let type = 'konsole'
   elseif ((&term ==# 'xterm' || &term =~# '^screen')
        \   && exists('g:CSApprox_eterm'))
        \ || &term =~? '^eterm'
     let colors = s:eterm_colors
+    let type = 'eterm'
   else
     let colors = s:xterm_colors
+    let type = 'xterm'
   endif
 
-  let greyscolors = sort(greys + colors, "s:IntCompare")
-  let r = s:NearestElemInList(a:r, greyscolors)
-  let g = s:NearestElemInList(a:g, greyscolors)
-  let b = s:NearestElemInList(a:b, greyscolors)
+  if !exists('s:approximator_cache_'.type)
+    let s:approximator_cache_{type} = {}
+  endif
+
+  let rv = get(s:approximator_cache_{type}, hex, -1)
+  if rv != -1
+    return rv
+  endif
+
+  " Only obtain sorted list once
+  if !exists("s:".type."_greys_colors")
+    let s:{type}_greys_colors = sort(greys + colors, "s:IntCompare")
+  endif
+
+  let greys_colors = s:{type}_greys_colors
+
+  let r = s:NearestElemInList(a:r, greys_colors)
+  let g = s:NearestElemInList(a:g, greys_colors)
+  let b = s:NearestElemInList(a:b, greys_colors)
 
   let len = len(colors)
   if (r == g && g == b && index(greys, r) > 0)
-    return 16 + len * len * len + index(greys, r)
+    let rv = 16 + len * len * len + index(greys, r)
   else
     let r = s:NearestElemInList(a:r, colors)
     let g = s:NearestElemInList(a:g, colors)
     let b = s:NearestElemInList(a:b, colors)
-    return index(colors, r) * len * len
-       \ + index(colors, g) * len
-       \ + index(colors, b)
-       \ + 16
+    let rv = index(colors, r) * len * len
+         \ + index(colors, g) * len
+         \ + index(colors, b)
+         \ + 16
   endif
+
+  let s:approximator_cache_{type}[hex] = rv
+  return rv
 endfunction
 
 " {>2} Color comparator
