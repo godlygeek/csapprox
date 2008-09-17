@@ -185,6 +185,7 @@ function! s:Highlights()
   let i = 0
   while 1
     let i += 1
+
     " Only interested in groups that exist and aren't linked
     if synIDtrans(i) == 0
       break
@@ -195,36 +196,32 @@ function! s:Highlights()
       continue
     endif
 
-    if !has_key(rv, synIDtrans(i))
-      let group = {}
-      let group.name = synIDattr(synIDtrans(i), "name")
+    let rv[i] = {}
+    let rv[i].name = synIDattr(i, "name")
 
-      for where in [ "term", "cterm", "gui" ]
-        let group[where]  = {}
-        for attr in [ "fg", "bg", "sp", "bold", "italic",
-                    \ "reverse", "underline", "undercurl" ]
-          let group[where][attr] = synIDattr(synIDtrans(i), attr, where)
-        endfor
-
-        if s:NeedRedirFallback()
-          redir => temp
-          exe 'sil hi ' . group.name
-          redir END
-          let temp = matchstr(temp, where.'sp=\zs.*')
-          if len(temp) == 0 || temp[0] =~ '\s'
-            let temp = ""
-          else
-            " Make sure we can handle guisp='dark red'
-            let temp = substitute(temp, '[\x00].*', '', '')
-            let temp = substitute(temp, '\s*\(c\=term\|gui\).*', '', '')
-            let temp = substitute(temp, '\s*$', '', '')
-          endif
-          let group[where]["sp"] = temp
-        endif
+    for where in [ "term", "cterm", "gui" ]
+      let rv[i][where]  = {}
+      for attr in [ "fg", "bg", "sp", "bold", "italic",
+            \ "reverse", "underline", "undercurl" ]
+        let rv[i][where][attr] = synIDattr(i, attr, where)
       endfor
 
-      let rv[synIDtrans(i)] = group
-    endif
+      if s:NeedRedirFallback()
+        redir => temp
+        exe 'sil hi ' . rv[i].name
+        redir END
+        let temp = matchstr(temp, where.'sp=\zs.*')
+        if len(temp) == 0 || temp[0] =~ '\s'
+          let temp = ""
+        else
+          " Make sure we can handle guisp='dark red'
+          let temp = substitute(temp, '[\x00].*', '', '')
+          let temp = substitute(temp, '\s*\(c\=term\|gui\).*', '', '')
+          let temp = substitute(temp, '\s*$', '', '')
+        endif
+        let rv[i][where]["sp"] = temp
+      endif
+    endfor
   endwhile
 
   return rv
