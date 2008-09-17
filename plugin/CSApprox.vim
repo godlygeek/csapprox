@@ -139,11 +139,12 @@ endfunction
 " Finds the nearest element to the given element in the given list
 function! s:NearestElemInList(elem, list)
   let len = len(a:list)
-  for i in range(len)
-    if (i == len - 1) || (a:elem <= (a:list[i] + a:list[i+1]) / 2)
+  for i in range(len-1)
+    if (a:elem <= (a:list[i] + a:list[i+1]) / 2)
       return a:list[i]
     endif
   endfor
+  return a:list[len-1]
 endfunction
 
 " {>1} Collect info for the set highlights
