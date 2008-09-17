@@ -303,7 +303,7 @@ function! s:UpdateRgbHash()
       endif
       let v = matchlist(line, parsepat)
       if len(v) > 0
-        let s:rgb[tolower(v[4])] = printf("%02x%02x%02x", v[1], v[2], v[3])
+        let s:rgb[tolower(v[4])] = printf("#%02x%02x%02x", v[1], v[2], v[3])
       endif
     endfor
 
@@ -671,7 +671,7 @@ function! s:CSApproxImpl()
   endfor
 
   " And store the new highlights for use in the next iteration
-  let s:highlights = s:Highlights()
+  let s:highlights = highlights
 endfunction
 
 " {>1} Hooks
