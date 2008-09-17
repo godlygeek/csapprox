@@ -182,10 +182,17 @@ endfunction
 function! s:Highlights()
   let rv = {}
 
-  let i = 1
+  let i = 0
   while 1
-    if synIDtrans(i) == 0 || !len(synIDattr(synIDtrans(i), "name"))
+    let i += 1
+    " Only interested in groups that exist and aren't linked
+    if synIDtrans(i) == 0
       break
+    endif
+
+    " Handle vim bug allowing groups with name == "" to be created
+    if synIDtrans(i) != i || len(synIDattr(i, "name")) == 0
+      continue
     endif
 
     if !has_key(rv, synIDtrans(i))
@@ -218,8 +225,6 @@ function! s:Highlights()
 
       let rv[synIDtrans(i)] = group
     endif
-
-    let i += 1
   endwhile
 
   return rv
