@@ -8,7 +8,7 @@
                 \___//___//_/ |_|/ .__// .__//_/   \___//_\_\  ~
                                 /_/   /_/                      ~
                                                   For Vim version 7.0 or newer
-                                                      Last changed 12 Sep 2008
+                                                      Last changed 05 Oct 2008
 
                                By Matt Wozniski
                                 mjw@drexel.edu
@@ -72,9 +72,13 @@ GUI support in their "gvim" binary, and not in their "vim" binary.  You can
 check if GUI support is available by doing: >
     :echo has('gui')
 
-If you are in an environment where the "vim" binary does not include GUI
-support, but where a "gvim" binary is available, you can probably launch Vim
-with GUI support anyway using the |-v| flag in the shell: >
+If that prints 0, the first thing to try would be searching for a larger vim
+package provided by your distribution, like "vim-enhanced" on RedHat/CentOS
+or "vim" or "vim-gnome" on Debian/Ubuntu.
+
+If you are unable to obtain a "vim" binary that includes GUI support, but
+have a "gvim" binary available, you can probably launch Vim with GUI support
+anyway by calling gvim with the |-v| flag in the shell: >
     gvim -v
 
 If that does not work and no package with GUI support is available, you will
@@ -92,7 +96,7 @@ either need for 't_Co' to be set to 88 or 256 in |vimrc|, or for $TERM to be
 set to something that implies high color support.  Possible choices include
 "xterm-256color" for 256 color support and "rxvt-unicode" for 88 color
 support.
-
+                                                              *csapprox-palettes*
 Also, there are three different 256 color cube palettes available and CSApprox
 has no way to tell which you're using unless $TERM is set to something that is
 specific to the terminal, like "konsole" or "Eterm".  Because of this, the
@@ -121,12 +125,13 @@ g:CSApprox_loaded                                          *g:CSApprox_loaded*
     If set in your |vimrc|, CSApprox is not loaded.
 
 g:CSApprox_verbose_level                            *g:CSApprox_verbose_level*
-    While running, CSApprox sets 'verbose' to this value (default 1).  This
-    allows CSApprox to default to warning whenever something might be wrong,
-    but allows the user to disable this behavior if he wants.  The most
-    important messages will be shown at verbosity level 1, some less important
-    ones will be shown at verbosity level 2.  Internal errors and
-    configuration errors are shown regardless of verbosity level.
+    When CSApprox is run, the 'verbose' option will be temporarily raised to
+    the value held in this variable unless it is already greater.  The default
+    value is 1, which allows CSApprox to default to warning whenever something
+    is wrong, even if it is recoverable, but allows the user to quiet us if he
+    wants by changing this variable to 0.  The most important messages will be
+    shown at verbosity level 1; some less important ones will be shown at
+    higher verbosity levels.
 
 g:CSApprox_eterm                                            *g:CSApprox_eterm*
     If set, CSApprox will use the Eterm palette when 'term' is "xterm" or
@@ -341,6 +346,8 @@ kterm (as of version 6.2.0)
 
 ==============================================================================
 7. Changelog                                              *csapprox-changelog*
+
+ 1.00   04 Oct 2008   First public release
 
  0.90   14 Sep 2008   Initial beta release
 

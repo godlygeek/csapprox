@@ -1,8 +1,8 @@
-" CSApprox:      Approximate gvim colorschemes to suitable terminal colors
-" Maintainer:    Matthew Wozniski (mjw@drexel.edu)
-" Date:          Sun, 14 Sep 2008 12:43:33 -0400
-" Version:       0.90
-" History:       :help csapprox-changelog
+" CSApprox:    Make gvim-only colorschemes work transparently in terminal vim
+" Maintainer:  Matthew Wozniski (mjw@drexel.edu)
+" Date:        Sun, 05 Oct 2008 00:26:22 -0400
+" Version:     1.00
+" History:     :help csapprox-changelog
 
 " Whenever you change colorschemes using the :colorscheme command, this script
 " will be executed.  If you're running in 256 color terminal or an 88 color
@@ -563,15 +563,14 @@ endfunction
 " {>2} Main function
 " Wrapper around the actual implementation to make it easier to ensure that
 " all temporary settings are restored by the time we return, whether or not
-" something was thrown.  Additionally, sets the 'verbose' option to
-" g:CSApprox_verbose_level (default 1) for the duration of the main function.
-" This allows us to default to a message whenever any error, even
-" a recoverable one, occurs, meaning the user quickly finds out when
+" something was thrown.  Additionally, sets the 'verbose' option to the max of
+" g:CSApprox_verbose_level (default 1) and &verbose for the duration of the
+" main function.  This allows us to default to a message whenever any error,
+" even a recoverable one, occurs, meaning the user quickly finds out when
 " something's wrong, but makes it very easy for the user to make us silent.
 function! s:CSApprox()
   try
     let savelz  = &lz
-    let savevbs = &vbs
 
     set lz
 
@@ -596,9 +595,9 @@ function! s:CSApprox()
     if !exists("g:CSApprox_verbose_level")
       let g:CSApprox_verbose_level = 1
     endif
-    sil! let &verbose=g:CSApprox_verbose_level
 
-    call s:CSApproxImpl()
+    " Set 'verbose' set to the maximum of &verbose and CSApprox_verbose_level
+    exe max([&vbs, g:CSApprox_verbose_level]) 'verbose call s:CSApproxImpl()'
   finally
     if exists("colors_name")
       let g:colors_name = colors_name
@@ -610,7 +609,6 @@ function! s:CSApprox()
     endif
 
     let &lz   = savelz
-    let &vbs  = savevbs
   endtry
 endfunction
 
@@ -623,8 +621,9 @@ endfunction
 function! s:CSApproxImpl()
   " Return if not running in an 88/256 color terminal
   if has('gui_running') || (&t_Co != 256 && &t_Co != 88)
-    if &verbose && &t_Co != 256 && &t_Co != 88
+    if &verbose && !has('gui_running') && &t_Co != 256 && &t_Co != 88
       echomsg "CSApprox skipped; terminal only has" &t_Co "colors, not 88/256"
+      echomsg "Try checking :help csapprox-terminal for workarounds"
     endif
 
     return
@@ -675,15 +674,15 @@ function! s:CSApproxImpl()
     endif
   endfor
 
-  " Then, set all the modified colors to approximate the gui colors.
+  " We need to set the Normal group first so 'bg' and 'fg' work as colors
   call sort(modified, "s:SortNormalFirst")
 
-  " And finally set each modified color's cterm attributes to match gui
+  " then set each modified color's cterm attributes to match gui
   for hlid in modified
     call s:SetCtermFromGui(highlights[hlid])
   endfor
 
-  " And store the new highlights for use in the next iteration
+  " and finally, store the new highlights for use in the next iteration
   let s:highlights = highlights
 endfunction
 
