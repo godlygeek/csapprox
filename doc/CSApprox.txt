@@ -228,6 +228,7 @@ User intervention is sometimes required for information about the terminal.
   |csapprox-terminal-example|.
 
 Some colorschemes could fail if they try to be too smart.
+
   A colorscheme could decide to only set colors for the mode Vim is running
   in.  If a scheme only sets GUI colors when the GUI is running, instead of
   using the usual approach of setting all colors and letting Vim choose which
@@ -238,6 +239,7 @@ Some colorschemes could fail if they try to be too smart.
   that skipping them is the proper behavior.
 
 It's slow.
+
   For me, it takes Vim's startup time from 0.15 seconds to 0.35 seconds.  This
   is probably still acceptable, but it is definitely worth trying to cut down
   on this time in future versions.
