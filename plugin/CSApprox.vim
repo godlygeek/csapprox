@@ -583,6 +583,14 @@ function! s:CSApprox()
       unlet g:colors_name
     endif
 
+    " Similarly, the global variable "syntax_cmd" must be set to something vim
+    " doesn't recognize, lest vim helpfully switch all colors back to the
+    " default whenever the Normal group is changed (in syncolor.vim)...
+    if exists("g:syntax_cmd")
+      let syntax_cmd = g:syntax_cmd
+    endif
+    let g:syntax_cmd = "PLEASE DON'T CHANGE ANY COLORS!!!"
+
     " Set up our verbosity level, if needed.
     " Default to 1, so the user can know if something's wrong.
     if !exists("g:CSApprox_verbose_level")
@@ -594,6 +602,11 @@ function! s:CSApprox()
   finally
     if exists("colors_name")
       let g:colors_name = colors_name
+    endif
+
+    unlet g:syntax_cmd
+    if exists("syntax_cmd")
+      let g:syntax_cmd = syntax_cmd
     endif
 
     let &lz   = savelz
