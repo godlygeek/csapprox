@@ -8,7 +8,7 @@
                 \___//___//_/ |_|/ .__// .__//_/   \___//_\_\  ~
                                 /_/   /_/                      ~
                                                   For Vim version 7.0 or newer
-                                                      Last changed 05 Oct 2008
+                                                      Last changed 28 Oct 2008
 
                                By Matt Wozniski
                                 mjw@drexel.edu
@@ -347,6 +347,9 @@ kterm (as of version 6.2.0)
 
 ==============================================================================
 7. Changelog                                              *csapprox-changelog*
+
+ 1.10   28 Oct 2008   Enable running on systems with no rgb.txt (Penn Su)
+                      Begin distributing a copy of rgb.txt with CSApprox
 
  1.00   04 Oct 2008   First public release
 
