@@ -294,6 +294,7 @@ function! s:UpdateRgbHash()
                     \ '/usr/lib/X11',
                     \ '/usr/local/X11R6/lib/X11',
                     \ '/usr/X11R6/lib/X11' ]
+                    \ + split(globpath(&rtp, ''), '\n')
     let s:rgb = copy(s:rgb_defaults)
     sil! let lines = readfile(dir . '/rgb.txt')
 
