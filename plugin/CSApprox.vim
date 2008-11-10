@@ -457,7 +457,7 @@ function! s:SetCtermFromGui(hl)
       endif
       try
         let val = s:rgb[tolower(val)]
-      catch /^/
+      catch
         if &verbose
           echomsg "CSApprox: Colorscheme uses unknown color \"" . val . "\""
         endif
@@ -481,15 +481,11 @@ function! s:SetCtermFromGui(hl)
   endfor
 
   " Finally, set the attributes
-  let attributes = []
-  for attribute in [ 'bold', 'italic', 'underline', 'undercurl' ]
-    if hl.cterm[attribute] == 1
-      let attributes += [ attribute ]
-    endif
-  endfor
+  let attrs = [ 'bold', 'italic', 'underline', 'undercurl' ]
+  call filter(attrs, 'hl.cterm[v:val] == 1')
 
-  if !empty(attributes)
-    exe 'hi ' . hl.name . ' cterm=' . join(attributes, ',')
+  if !empty(attrs)
+    exe 'hi ' . hl.name . ' cterm=' . join(attrs, ',')
   endif
 endfunction
 
@@ -684,7 +680,62 @@ function! s:CSApproxImpl()
   endfor
 
   " and finally, store the new highlights for use in the next iteration
-  let s:highlights = highlights
+  let s:highlights = copy(highlights)
+endfunction
+
+function! CSApproxSnapshot(file, ...)
+  let force = (a:0 ? a:1 : 0)
+  let file = fnamemodify(a:file, ":p")
+
+  if empty(file)
+    throw "Bad file name: \"" . file . "\""
+  elseif (filewritable(fnamemodify(file, ':h')) != 2)
+    throw "Cannot write to directory \"" . fnamemodify(file, ':h') . "\""
+  elseif (glob(file) || filereadable(file)) && !force
+    throw "File exists, not overriding without 'force' flag!"
+  endif
+
+  let save_t_Co = &t_Co
+
+  try
+    let lines = []
+    let lines += [ '" This scheme was created by CSApproxSnapshot' ]
+    let lines += [ '" on ' . strftime("%a, %d %b %Y") ]
+    let lines += [ '' ]
+    let lines += [ 'hi clear' ]
+    let lines += [ 'if exists("syntax_on")' ]
+    let lines += [ '    syntax reset' ]
+    let lines += [ 'endif' ]
+    let lines += [ '' ]
+    let lines += [ 'let g:colors_name = ' . string(fnamemodify(file, ':t:r')) ]
+    let lines += [ '' ]
+
+    let lines += [ 'if 0' ]
+    for &t_Co in [ 256, 88 ]
+      let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
+      for hlnum in sort(keys(s:highlights), "s:SortNormalFirst")
+        let hl = s:highlights[hlnum]
+        let line = '    highlight ' . hl.name
+        for type in [ 'term', 'cterm', 'gui' ]
+          let attrs = [ 'bold', 'italic', 'underline', 'undercurl' ]
+          call filter(attrs, 'hl.cterm[v:val] == 1')
+          let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
+          if type != 'term'
+            let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'bg')
+            let line .= ' ' . type . 'fg=' . (len(hl[type].fg) ? hl[type].fg : 'fg')
+            if type == 'gui' && hl.gui.sp !~ '^\s*$'
+              let line .= ' ' . type . 'sp=' . hl[type].sp
+            endif
+          endif
+        endfor
+        let lines += [ line ]
+      endfor
+    endfor
+    let lines += [ 'endif' ]
+    call writefile(lines, file)
+  finally
+    let &t_Co = save_t_Co
+  endtry
 endfunction
 
 " {>1} Hooks
