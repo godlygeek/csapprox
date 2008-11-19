@@ -1,7 +1,7 @@
 " CSApprox:    Make gvim-only colorschemes work transparently in terminal vim
 " Maintainer:  Matthew Wozniski (mjw@drexel.edu)
-" Date:        Tue, 28 Oct 2008 01:35:25 -0400
-" Version:     1.10
+" Date:        Wed, 19 Nov 2008 12:14:58 -0500
+" Version:     1.50
 " History:     :help csapprox-changelog
 
 " Whenever you change colorschemes using the :colorscheme command, this script
@@ -19,16 +19,14 @@
 " Quit if the user doesn't want or need us or is missing the gui feature.  We
 " need +gui to be able to check the gui color settings; vim doesn't bother to
 " store them if it is not built with +gui.
-if has("gui_running") || ! has("gui") || exists('g:CSApprox_loaded')
+if ! has("gui") || exists('g:CSApprox_loaded')
   " XXX This depends upon knowing the default for g:CSApprox_verbose_level
   let s:verbose = 1
   if exists("g:CSApprox_verbose_level")
     let s:verbose  = g:CSApprox_verbose_level
   endif
 
-  if has('gui_running') && s:verbose > 1
-    echomsg "Not loading CSApprox in gui mode."
-  elseif ! has('gui') && s:verbose > 0
+  if ! has('gui') && s:verbose > 0
     echomsg "CSApprox needs gui support - not loading."
   endif
 
@@ -427,7 +425,8 @@ endfunction
 " structure and normalize it for use on a cterm, then handles matching the
 " gvim colors to the closest cterm colors by calling the approximator
 " specified with g:CSApprox_approximator_function and sets the colors and
-" attributes appropriately to match the gui.
+" attributes appropriately to match the gui.  The final colors are saved in
+" s:highlights for use by CSApproxSnapshot.
 function! s:SetCtermFromGui(hl)
   let hl = a:hl
 
@@ -494,15 +493,7 @@ endfunction
 
 " {>2} Variable storing highlights between runs
 " This allows us to remember what the highlights looked like when we last ran,
-" and compare against it the next time we're called.  Using this means that we
-" can avoid work when we'd just be duplicating our own work if we tried to
-" match the gui colors to cterm colors again.  More subtly, it also allows us
-" to support composite colorschemes that start with a :colorscheme to load an
-" existing colorscheme, and then add or modify highlights that the sourced
-" scheme provides.  Since we get called twice by such a scheme, things would
-" fall apart without info saved between runs - the first call would set some
-" high colors, and the second would bail because some high colors are set; it
-" would think that the scheme was already 256 color even though it wasn't.
+" which can be used by CSApproxSnapshot to post-process the results.
 let s:highlights = {}
 
 " {>2} Builtin cterm color names above 15
@@ -511,9 +502,9 @@ let s:highlights = {}
 " was actually written for a high color terminal with our choices, but have no
 " way to tell if a colorscheme was written for a high color terminal, we fall
 " back on guessing.  If any highlight group has a cterm color set to 16 or
-" higher, and it wasn't set by this script, we assume that the user has used
-" a high color colorscheme - unless that color is one of the below, which vim
-" can set internally when a color is requested by name.
+" higher, we assume that the user has used a high color colorscheme - unless
+" that color is one of the below, which vim can set internally when a color is
+" requested by name.
 let s:presets_88  = []
 let s:presets_88 += [32] " Brown
 let s:presets_88 += [72] " DarkYellow
@@ -612,13 +603,12 @@ endfunction
 " {>2} CSApprox implementation
 " Verifies that the user has not started the gui, and that vim recognizes his
 " terminal as having enough colors for us to go on, then gathers the existing
-" highlights, removes the ones that match what were set on the last run
-" through, and sets the cterm colors to match the gui colors for all modified
-" highlights.
+" highlights and sets the cterm colors to match the gui colors for all those
+" highlights (unless the colorscheme was already high-color).
 function! s:CSApproxImpl()
   " Return if not running in an 88/256 color terminal
-  if has('gui_running') || (&t_Co != 256 && &t_Co != 88)
-    if &verbose && !has('gui_running') && &t_Co != 256 && &t_Co != 88
+  if &t_Co != 256 && &t_Co != 88 && !has('gui_running')
+    if &verbose && !has('gui_running')
       echomsg "CSApprox skipped; terminal only has" &t_Co "colors, not 88/256"
       echomsg "Try checking :help csapprox-terminal for workarounds"
     endif
@@ -639,31 +629,19 @@ function! s:CSApproxImpl()
     let highlights[hlID('Normal')].gui.fg = 'black'
   endif
 
-  " Create a list of colors that have changed since the last iteration
-  let modified = []
-  for hlid in keys(highlights)
-    if    !has_key(s:highlights, hlid)
-     \ || s:highlights[hlid].cterm != highlights[hlid].cterm
-     \ || s:highlights[hlid].gui   != highlights[hlid].gui
-      let modified += [hlid]
-    endif
-  endfor
+  let hinums = keys(highlights)
 
   " Make sure that the script is not already 256 color by checking to make
-  " sure that no modified groups are set to a value above 256, unless the
-  " color they're set to can be set internally by vim (gotten by scraping
+  " sure that no groups are set to a value above 256, unless the color they're
+  " set to can be set internally by vim (gotten by scraping
   " color_numbers_{88,256} in syntax.c:do_highlight)
-  for hlid in modified
+  for hlid in hinums
     let val = highlights[hlid]
     if   (    val.cterm.bg > 15
-         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.bg)) < 0
-         \ && val.cterm.bg !=
-            \   get(get(get(s:highlights, hlid, {}), 'cterm', {}), 'bg', ''))
+         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.bg)) < 0)
     \ || (    val.cterm.fg > 15
-         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.fg)) < 0
-         \ && val.cterm.fg !=
-            \   get(get(get(s:highlights, hlid, {}), 'cterm', {}), 'fg', ''))
-      " The value is set above 15, and wasn't set by us or vim.
+         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.fg)) < 0)
+      " The value is set above 15, and wasn't set by vim.
       if &verbose >= 2
         echomsg 'CSApprox: Exiting - high color found for' val.name
       endif
@@ -672,19 +650,22 @@ function! s:CSApproxImpl()
   endfor
 
   " We need to set the Normal group first so 'bg' and 'fg' work as colors
-  call sort(modified, "s:SortNormalFirst")
+  call sort(hinums, "s:SortNormalFirst")
 
-  " then set each modified color's cterm attributes to match gui
-  for hlid in modified
+  " then set each color's cterm attributes to match gui
+  for hlid in hinums
     call s:SetCtermFromGui(highlights[hlid])
   endfor
 
-  " and finally, store the new highlights for use in the next iteration
+  " and finally, store the new highlights for use in CSApproxSnapshot()
   let s:highlights = copy(highlights)
 endfunction
 
-function! CSApproxSnapshot(file, ...)
-  let force = (a:0 ? a:1 : 0)
+" {>2} Write out the current colors to an 88/256 color colorscheme file.
+" "file" - destination filename
+" "overwrite" - overwrite an existing file
+function! s:CSApproxSnapshot(file, overwrite)
+  let force = a:overwrite
   let file = fnamemodify(a:file, ":p")
 
   if empty(file)
@@ -692,7 +673,11 @@ function! CSApproxSnapshot(file, ...)
   elseif (filewritable(fnamemodify(file, ':h')) != 2)
     throw "Cannot write to directory \"" . fnamemodify(file, ':h') . "\""
   elseif (glob(file) || filereadable(file)) && !force
-    throw "File exists, not overriding without 'force' flag!"
+    " TODO - respect 'confirm' here and prompt if it's set.
+    echohl ErrorMsg
+    echomsg "E13: File exists (add ! to override)"
+    echohl None
+    return
   endif
 
   let save_t_Co = &t_Co
@@ -738,6 +723,10 @@ function! CSApproxSnapshot(file, ...)
   endtry
 endfunction
 
+" {>2} Snapshot user command
+command! -bang -nargs=1 -complete=file -bar CSApproxSnapshot
+        \ call s:CSApproxSnapshot(<f-args>, strlen("<bang>"))
+
 " {>1} Hooks
 
 " {>2} Autocmds
@@ -745,11 +734,14 @@ endfunction
 augroup CSApprox
   au!
   au ColorScheme * call s:CSApprox()
+  "au User CSApproxPost highlight Normal ctermbg=none | highlight NonText ctermbg=None
 augroup END
 
 " {>2} Execute
 " The last thing to do when sourced is to run and actually fix up the colors.
-call s:CSApprox()
+if !has('gui_running')
+  call s:CSApprox()
+endif
 
 " {>1} Restore compatibility options
 let &cpo = s:savecpo

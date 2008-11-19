@@ -8,7 +8,7 @@
                 \___//___//_/ |_|/ .__// .__//_/   \___//_\_\  ~
                                 /_/   /_/                      ~
                                                   For Vim version 7.0 or newer
-                                                      Last changed 28 Oct 2008
+                                                      Last changed 19 Nov 2008
 
                                By Matt Wozniski
                                 mjw@drexel.edu
@@ -85,6 +85,15 @@ If that does not work and no package with GUI support is available, you will
 need to compile Vim yourself and ensure that GUI support is included.  If this
 is inconvenient for you, make sure that the Vim maintainer for your
 distribution knows it.
+                                                           *:CSApproxSnapshot*
+NOTE: As of CSApprox version 1.5, there is another alternative.  CSApprox now
+      provides a command, :CSApproxSnapshot, that can be used from inside gvim
+      or a terminal vim that is built with +gui.  It allows you to write out a
+      colorscheme file representing the current colors that will work in gvim,
+      88 color vim, or 256 color vim.  The syntax is: >
+          :CSApproxSnapshot[!] /path/to/new/colorscheme
+<       For example: >
+          :CSApproxSnapshot ~/.vim/colors/foobar.vim
 
 b) Properly configured terminal                            *csapprox-terminal*
 
@@ -217,6 +226,8 @@ GUI support is required.
   tell what the colorscheme was trying to do.  See |csapprox-+gui| for some
   potential work arounds if your distribution doesn't provide a Vim with +gui.
 
+  NOTE: As of CSApprox 1.5, a reasonable workaround is |:CSApproxSnapshot|
+
 User intervention is sometimes required for information about the terminal.
 
   This is really an insurmountable problem.  Unfortunately, most terminal
@@ -249,6 +260,10 @@ It's slow.
   For me, it takes Vim's startup time from 0.15 seconds to 0.35 seconds.  This
   is probably still acceptable, but it is definitely worth trying to cut down
   on this time in future versions.
+
+  NOTE: As of CSApprox 1.5, |:CSApproxSnapshot| can be used to eliminate the
+        overhead of CSApprox, since the approximations only need to be done
+        when the colorscheme is created, rather than every time it's used.
 
 ==============================================================================
 6. Appendix - Terminals and Palettes                  *csapprox-terminal-list*
@@ -347,6 +362,10 @@ kterm (as of version 6.2.0)
 
 ==============================================================================
 7. Changelog                                              *csapprox-changelog*
+
+ 1.50   19 Nov 2008   Add CSApproxSnapshot command, as an alternative solution
+                      when the user has gvim or a vim with gui support, but
+                      sometimes needs to use a vim without gui support.
 
  1.10   28 Oct 2008   Enable running on systems with no rgb.txt (Penn Su)
                       Begin distributing a copy of rgb.txt with CSApprox
