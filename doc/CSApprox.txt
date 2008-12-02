@@ -188,13 +188,15 @@ g:CSApprox_approximator_function            *g:CSApprox_approximator_function*
     references.
 
 g:CSApprox_redirfallback                            *g:CSApprox_redirfallback*
-    As of Vim 7.2.018, there is a bug in the Vim function synIDattr() that
-    stops it from correctly reporting information for the 'guisp' attribute.
-    CSApprox includes a workaround for this problem, as well as a test that
-    ought to disable this workaround once synIDattr() is working properly.
+    Until Vim 7.2.052, there was a bug in the Vim function synIDattr() that
+    made it impossible to determine syntax information about the |guisp|
+    attribute.  CSApprox includes a workaround for this problem, as well as a
+    test that ought to disable this workaround if synIDattr() works properly.
     If this test should happen to give improper results somehow, the user can
     force the behavior with this variable.  When set to 1, the workaround will
-    always be used, and when set to 0, synIDattr() is blindly used.
+    always be used, and when set to 0, synIDattr() is blindly used.  Needless
+    to say, if this automatic detection should ever fail, the author would
+    like to be notified!
 
 ==============================================================================
 4. Rationale/Design                                          *csapprox-design*

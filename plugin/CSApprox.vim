@@ -149,25 +149,15 @@ endfunction
 " {>1} Collect info for the set highlights
 
 " {>2} Determine if synIDattr is usable
-" As of 7.2.018, synIDattr() can't be used to check 'guisp', and no official
-" patch has been released despite my suggesting one.  So, in an attempt to be
-" forward compatible, I've included a test to see if synIDattr() works
-" properly.  If synIDattr() works properly, we'll use it to check the 'guisp'
-" attribute, otherwise we'll fall back onto using :redir and checking the
-" output of :highlight.  This test can be overridden by setting the global
-" variable g:CSApprox_redirfallback to 1 (to force use of :redir) or to 0 (to
-" force use of synIDattr()).
+" synIDattr() couldn't support 'guisp' until 7.2.052.  This function returns
+" true if :redir is needed to find the 'guisp' attribute, false if synIDattr()
+" is functional.  This test can be overridden by setting the global variable
+" g:CSApprox_redirfallback to 1 (to force use of :redir) or to 0 (to force use
+" of synIDattr()).
 function! s:NeedRedirFallback()
   if !exists("g:CSApprox_redirfallback")
-    hi CSApproxTest guisp=Red gui=standout
-    if synIDattr(hlID('CSApproxTest'), 'sp', 'gui') == '1'
-      " We requested the 'sp' attribute, but vim thought we wanted 'standout'
-      " So, reporting of the guisp attribute is broken.  Fall back on :redir
-      let g:CSApprox_redirfallback=1
-    else
-      " Reporting guisp works, use synIDattr
-      let g:CSApprox_redirfallback=0
-    endif
+    let g:CSApprox_redirfallback = (v:version == 702 && !has('patch52'))
+                                 \  || v:version < 702
   endif
   return g:CSApprox_redirfallback
 endfunction
