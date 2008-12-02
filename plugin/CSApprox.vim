@@ -190,9 +190,12 @@ function! s:Highlights()
 
     for where in [ "term", "cterm", "gui" ]
       let rv[i][where]  = {}
-      for attr in [ "fg", "bg", "sp", "bold", "italic",
-            \ "reverse", "underline", "undercurl" ]
+      for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
         let rv[i][where][attr] = synIDattr(i, attr, where)
+      endfor
+
+      for attr in [ "fg", "bg", "sp" ]
+        let rv[i][where][attr] = synIDattr(i, attr.'#', where)
       endfor
 
       if s:NeedRedirFallback()
@@ -210,6 +213,12 @@ function! s:Highlights()
         endif
         let rv[i][where]["sp"] = temp
       endif
+
+      for attr in [ "fg", "bg", "sp" ]
+        if rv[i][where][attr] == -1
+          let rv[i][where][attr] = ''
+        endif
+      endfor
     endfor
   endwhile
 
@@ -360,6 +369,19 @@ function! s:attr_map(attr)
   return rv
 endfunction
 
+" {>2} Normalize the GUI settings of a highlight group
+" If the Normal group is cleared, set it to gvim's default, black on white
+" Though this would be a really weird thing for a scheme to do... *shrug*
+function! s:FixupGuiInfo(highlights)
+  if a:highlights[s:hlid_normal].gui.bg == ''
+    let a:highlights[s:hlid_normal].gui.bg = 'white'
+  endif
+
+  if a:highlights[s:hlid_normal].gui.fg == ''
+    let a:highlights[s:hlid_normal].gui.fg = 'black'
+  endif
+endfunction
+
 " {>2} Map gui settings to cterm settings
 " Given information about a highlight group, replace the cterm settings with
 " the mapped gui settings, applying any attribute overrides along the way.  In
@@ -371,57 +393,55 @@ endfunction
 " ensure that the 'sp' attribute is never set for cterm, since no terminal can
 " handle that particular highlight.  If the user wants to display the guisp
 " color, he should map it to either 'fg' or 'bg' using g:CSApprox_attr_map.
-function! s:FixupCtermInfo(hl)
-  let hl = a:hl
+function! s:FixupCtermInfo(highlights)
+  for hl in values(a:highlights)
 
-  " Find attributes to be set in the terminal
-  for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
-    let hl.cterm[attr] = ''
-    if hl.gui[attr] == 1
-      if s:attr_map(attr) != ''
-        let hl.cterm[ s:attr_map(attr) ] = 1
+    " Find attributes to be set in the terminal
+    for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
+      let hl.cterm[attr] = ''
+      if hl.gui[attr] == 1
+        if s:attr_map(attr) != ''
+          let hl.cterm[ s:attr_map(attr) ] = 1
+        endif
       endif
-    endif
-  endfor
+    endfor
 
-  for color in [ "bg", "fg" ]
-    let eff_color = color
+    for color in [ "bg", "fg" ]
+      let eff_color = color
+      if hl.cterm['reverse']
+        let eff_color = (color == 'bg' ? 'fg' : 'bg')
+      endif
+
+      let hl.cterm[color] = get(hl.gui, s:attr_map(eff_color), '')
+    endfor
+
+    if hl.gui['sp'] != '' && s:attr_map('sp') != ''
+      let hl.cterm[s:attr_map('sp')] = hl.gui['sp']
+    endif
+
+    if hl.cterm['reverse'] && hl.cterm.bg == ''
+      let hl.cterm.bg = 'fg'
+    endif
+
+    if hl.cterm['reverse'] && hl.cterm.fg == ''
+      let hl.cterm.fg = 'bg'
+    endif
+
     if hl.cterm['reverse']
-      let eff_color = (color == 'bg' ? 'fg' : 'bg')
+      let hl.cterm.reverse = ''
     endif
-
-    let hl.cterm[color] = get(hl.gui, s:attr_map(eff_color), '')
   endfor
-
-  if hl.gui['sp'] != '' && s:attr_map('sp') != ''
-    let hl.cterm[s:attr_map('sp')] = hl.gui['sp']
-  endif
-
-  if hl.cterm['reverse'] && hl.cterm.bg == ''
-    let hl.cterm.bg = 'fg'
-  endif
-
-  if hl.cterm['reverse'] && hl.cterm.fg == ''
-    let hl.cterm.fg = 'bg'
-  endif
-
-  if hl.cterm['reverse']
-    let hl.cterm.reverse = ''
-  endif
 endfunction
 
 " {>2} Set cterm colors for a highlight group
 " Given the information for a single highlight group (ie, the value of
-" one of the items in s:Highlights()), uses s:FixupCtermInfo to parse the
-" structure and normalize it for use on a cterm, then handles matching the
-" gvim colors to the closest cterm colors by calling the approximator
-" specified with g:CSApprox_approximator_function and sets the colors and
-" attributes appropriately to match the gui.  The final colors are saved in
-" s:highlights for use by CSApproxSnapshot.
+" one of the items in s:Highlights() already normalized with s:FixupCtermInfo
+" and s:FixupGuiInfo), handle matching the gvim colors to the closest cterm
+" colors by calling the appropriate approximator as specified with the
+" g:CSApprox_approximator_function variable and set the colors and attributes
+" appropriately to match the gui.
 function! s:SetCtermFromGui(hl)
   let hl = a:hl
-
-  call s:FixupCtermInfo(hl)
 
   " Set up the default approximator function, if needed
   if !exists("g:CSApprox_approximator_function")
@@ -482,10 +502,8 @@ endfunction
 
 " {>1} Top-level control
 
-" {>2} Variable storing highlights between runs
-" This allows us to remember what the highlights looked like when we last ran,
-" which can be used by CSApproxSnapshot to post-process the results.
-let s:highlights = {}
+" Cache the highlight ID of the normal group; it's used often and won't change
+let s:hlid_normal = hlID('Normal')
 
 " {>2} Builtin cterm color names above 15
 " Vim defines some color name to high color mappings internally (see
@@ -530,9 +548,9 @@ let s:presets_256 += [229] " LightYellow
 " to ensure that the Normal group is the first group we set.  If it weren't,
 " we could get E419 or E420 if a later color used guibg=bg or the likes.
 function! s:SortNormalFirst(num1, num2)
-  if a:num1 == hlID('Normal') && a:num1 != a:num2
+  if a:num1 == s:hlid_normal && a:num1 != a:num2
     return -1
-  elseif a:num2 == hlID('Normal') && a:num1 != a:num2
+  elseif a:num2 == s:hlid_normal && a:num1 != a:num2
     return 1
   else
     return 0
@@ -610,15 +628,8 @@ function! s:CSApproxImpl()
   " Get the current highlight colors
   let highlights = s:Highlights()
 
-  " If the Normal group is cleared, set it to gvim's default, black on white
-  " Though this would be a really weird thing for a scheme to do... *shrug*
-  if highlights[hlID('Normal')].gui.bg == ''
-    let highlights[hlID('Normal')].gui.bg = 'white'
-  endif
-
-  if highlights[hlID('Normal')].gui.fg == ''
-    let highlights[hlID('Normal')].gui.fg = 'black'
-  endif
+  call s:FixupGuiInfo(highlights)
+  call s:FixupCtermInfo(highlights)
 
   let hinums = keys(highlights)
 
@@ -647,9 +658,6 @@ function! s:CSApproxImpl()
   for hlid in hinums
     call s:SetCtermFromGui(highlights[hlid])
   endfor
-
-  " and finally, store the new highlights for use in CSApproxSnapshot()
-  let s:highlights = copy(highlights)
 endfunction
 
 " {>2} Write out the current colors to an 88/256 color colorscheme file.
@@ -671,6 +679,19 @@ function! s:CSApproxSnapshot(file, overwrite)
     return
   endif
 
+  " Sigh... This is basically a bug, but one that I have no chance of fixing.
+  " Vim decides that Pmenu should be highlighted in 'LightMagenta' in terminal
+  " vim and as 'Magenta' in gvim...  And I can't ask it what color it actually
+  " *wants*.  As far as I can see, there's no way for me to learn that
+  " I should output 'Magenta' when 'LightMagenta' is provided by vim for the
+  " terminal.
+  if !has('gui_running')
+    echohl WarningMsg
+    echomsg "Warning: The written colorscheme may have incorrect colors"
+    echomsg "         when CSApproxSnapshot is used in terminal vim!"
+    echohl None
+  endif
+
   let save_t_Co = &t_Co
 
   try
@@ -688,13 +709,15 @@ function! s:CSApproxSnapshot(file, overwrite)
 
     let lines += [ 'if 0' ]
     for &t_Co in [ 256, 88 ]
+      let highlights = s:Highlights()
+      call s:FixupGuiInfo(highlights)
       let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
-      for hlnum in sort(keys(s:highlights), "s:SortNormalFirst")
-        let hl = s:highlights[hlnum]
+      for hlnum in sort(keys(highlights), "s:SortNormalFirst")
+        let hl = highlights[hlnum]
         let line = '    highlight ' . hl.name
         for type in [ 'term', 'cterm', 'gui' ]
-          let attrs = [ 'bold', 'italic', 'underline', 'undercurl' ]
-          call filter(attrs, 'hl.cterm[v:val] == 1')
+          let attrs = [ 'reverse', 'bold', 'italic', 'underline', 'undercurl' ]
+          call filter(attrs, 'hl[type][v:val] == 1')
           let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
           if type != 'term'
             let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'bg')
