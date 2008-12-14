@@ -628,9 +628,6 @@ function! s:CSApproxImpl()
   " Get the current highlight colors
   let highlights = s:Highlights()
 
-  call s:FixupGuiInfo(highlights)
-  call s:FixupCtermInfo(highlights)
-
   let hinums = keys(highlights)
 
   " Make sure that the script is not already 256 color by checking to make
@@ -650,6 +647,9 @@ function! s:CSApproxImpl()
       return
     endif
   endfor
+
+  call s:FixupGuiInfo(highlights)
+  call s:FixupCtermInfo(highlights)
 
   " We need to set the Normal group first so 'bg' and 'fg' work as colors
   call sort(hinums, "s:SortNormalFirst")
