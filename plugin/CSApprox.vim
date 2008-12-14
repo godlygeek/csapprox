@@ -1,7 +1,7 @@
 " CSApprox:    Make gvim-only colorschemes work transparently in terminal vim
 " Maintainer:  Matthew Wozniski (mjw@drexel.edu)
-" Date:        Wed, 19 Nov 2008 12:14:58 -0500
-" Version:     1.50
+" Date:        Sun, 14 Dec 2008 06:12:55 -0500
+" Version:     2.00
 " History:     :help csapprox-changelog
 
 " Whenever you change colorschemes using the :colorscheme command, this script
@@ -557,6 +557,56 @@ function! s:SortNormalFirst(num1, num2)
   endif
 endfunction
 
+" {>2} Wrapper around :exe to allow :executing multiple commands.
+" "cmd" is the command to be :executed.
+" If the variable is a String, it is :executed.
+" If the variable is a List, each element is :executed.
+function! s:exe(cmd)
+  if type(a:cmd) == type('')
+    exe a:cmd
+  else
+    for cmd in a:cmd
+      call s:exe(cmd)
+    endfor
+  endif
+endfunction
+
+" {>2} Function to handle hooks
+" Prototype: HandleHooks(type [, scheme])
+" "type" is the type of hook to be executed, ie. "pre" or "post"
+" "scheme" is the name of the colorscheme that is currently active, if known
+"
+" If the variables g:CSApprox_hook_{type} and g:CSApprox_hook_{scheme}_{type}
+" exist, this will :execute them in that order.  If one does not exist, it
+" will silently be ignored.
+"
+" If the scheme name contains characters that are invalid in a variable name,
+" they will simply be removed.  Ie, g:colors_name = "123 foo_bar-baz456"
+" becomes "foo_barbaz456"
+"
+" NOTE: Exceptions will be printed out, rather than end processing early.  The
+" rationale is that it is worse for the user to fix the hook in an editor with
+" broken colors.  :)
+function! s:HandleHooks(type, ...)
+  let type = a:type
+  let scheme = (a:0 == 1 ? a:1 : "")
+  let scheme = substitute(scheme, '[^[:alnum:]_]', '', 'g')
+  let scheme = substitute(scheme, '^\d\+', '', '')
+
+  for cmd in [ 'g:CSApprox_hook_' . type,
+             \ 'g:CSApprox_' . scheme . '_hook_' . type,
+             \ 'g:CSApprox_hook_' . scheme . '_' . type ]
+    if exists(cmd)
+      try
+        call s:exe(eval(cmd))
+      catch
+        echomsg "Error processing " . cmd . ":"
+        echomsg v:exception
+      endtry
+    endif
+  endfor
+endfunction
+
 " {>2} Main function
 " Wrapper around the actual implementation to make it easier to ensure that
 " all temporary settings are restored by the time we return, whether or not
@@ -593,8 +643,12 @@ function! s:CSApprox()
       let g:CSApprox_verbose_level = 1
     endif
 
+    call s:HandleHooks("pre", (exists("colors_name") ? colors_name : ""))
+
     " Set 'verbose' set to the maximum of &verbose and CSApprox_verbose_level
     exe max([&vbs, g:CSApprox_verbose_level]) 'verbose call s:CSApproxImpl()'
+
+    call s:HandleHooks("post", (exists("colors_name") ? colors_name : ""))
   finally
     if exists("colors_name")
       let g:colors_name = colors_name
