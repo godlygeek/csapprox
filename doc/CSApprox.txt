@@ -117,7 +117,7 @@ however - see |csapprox-configuration|.
                                                    *csapprox-terminal-example*
 To turn on high color support without fixing $TERM, you can put something like
 this into your |vimrc|: >
-    if &term == 'xterm' && $HOSTNAME == 'my-machine'
+    if &term == 'xterm' && hostname() == 'my-machine'
         " On my machine, I use Konsole with 256 color support
         set t_Co=256
         let g:CSApprox_konsole = 1
@@ -230,8 +230,8 @@ g:CSApprox_hook_{scheme}_post                                 *csapprox-hooks*
     modified.  For example:
                                                        *csapprox-transparency*
 >
-      let g:CSApprox_hook_post = ['hi Normal  ctermbg=NONE',
-                                \ 'hi NonText ctermbg=NONE' ]
+      let g:CSApprox_hook_post = ['hi Normal  ctermbg=NONE ctermfg=NONE',
+                                \ 'hi NonText ctermbg=NONE ctermfg=NONE' ]
 <
     Setting g:CSApprox_hook_post as shown above will clear the background of
     the Normal and NonText groups, forcing the terminal's default background
@@ -252,8 +252,8 @@ g:CSApprox_hook_{scheme}_post                                 *csapprox-hooks*
     clear the Normal and NonText groups, but only for the colorscheme
     "desert", one could do the following:
 >
-      let g:CSApprox_hook_desert_post = ['hi Normal  ctermbg=NONE',
-                                       \ 'hi NonText ctermbg=NONE' ]
+    let g:CSApprox_hook_desert_post = ['hi Normal ctermbg=NONE ctermfg=NONE',
+                                    \ 'hi NonText ctermbg=NONE ctermfg=NONE' ]
 <
     NOTE: Any characters that would stop the string stored in g:colors_name
           from being a valid variable name will be removed before the
