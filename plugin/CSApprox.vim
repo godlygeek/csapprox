@@ -688,19 +688,23 @@ function! s:CSApproxImpl()
   " sure that no groups are set to a value above 256, unless the color they're
   " set to can be set internally by vim (gotten by scraping
   " color_numbers_{88,256} in syntax.c:do_highlight)
-  for hlid in hinums
-    let val = highlights[hlid]
-    if   (    val.cterm.bg > 15
-         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.bg)) < 0)
-    \ || (    val.cterm.fg > 15
-         \ && index(s:presets_{&t_Co}, str2nr(val.cterm.fg)) < 0)
-      " The value is set above 15, and wasn't set by vim.
-      if &verbose >= 2
-        echomsg 'CSApprox: Exiting - high color found for' val.name
+  "
+  " XXX: s:inhibit_hicolor_test allows this test to be skipped for snapshots
+  if !exists("s:inhibit_hicolor_test") || !s:inhibit_hicolor_test
+    for hlid in hinums
+      let val = highlights[hlid]
+      if   (    val.cterm.bg > 15
+            \ && index(s:presets_{&t_Co}, str2nr(val.cterm.bg)) < 0)
+            \ || (    val.cterm.fg > 15
+            \ && index(s:presets_{&t_Co}, str2nr(val.cterm.fg)) < 0)
+        " The value is set above 15, and wasn't set by vim.
+        if &verbose >= 2
+          echomsg 'CSApprox: Exiting - high color found for' val.name
+        endif
+        return
       endif
-      return
-    endif
-  endfor
+    endfor
+  endif
 
   call s:FixupGuiInfo(highlights)
   call s:FixupCtermInfo(highlights)
@@ -747,6 +751,7 @@ function! s:CSApproxSnapshot(file, overwrite)
   endif
 
   let save_t_Co = &t_Co
+  let s:inhibit_hicolor_test = 1
 
   try
     let lines = []
@@ -788,6 +793,7 @@ function! s:CSApproxSnapshot(file, overwrite)
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
+    unlet s:inhibit_hicolor_test
   endtry
 endfunction
 
