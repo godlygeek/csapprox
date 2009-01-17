@@ -82,12 +82,12 @@ function! s:ApproximatePerComponent(r,g,b)
   if &t_Co == 88
     let colors = s:urxvt_colors
     let type = 'urxvt'
-  elseif ((&term ==# 'xterm' || &term =~# '^screen')
+  elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
        \   && exists('g:CSApprox_konsole'))
        \ || &term =~? '^konsole'
     let colors = s:konsole_colors
     let type = 'konsole'
-  elseif ((&term ==# 'xterm' || &term =~# '^screen')
+  elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
        \   && exists('g:CSApprox_eterm'))
        \ || &term =~? '^eterm'
     let colors = s:eterm_colors
@@ -765,15 +765,45 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '' ]
     let lines += [ 'let g:colors_name = ' . string(fnamemodify(file, ':t:r')) ]
     let lines += [ '' ]
+    let lines += [ 'if v:version < 700' ]
+    let lines += [ '    command! -nargs=+ CSAHi exe "hi" substitute(substitute(<q-args>, "undercurl", "underline", "g"), "guisp\\S\\+", "", "g")' ]
+    let lines += [ 'else' ]
+    let lines += [ '    command! -nargs=+ CSAHi exe "hi" <q-args>' ]
+    let lines += [ 'endif' ]
+    let lines += [ '' ]
 
     let lines += [ 'if 0' ]
-    for &t_Co in [ 256, 88 ]
+    for round in [ 'konsole', 'eterm', 'xterm', 'urxvt' ]
+      sil! unlet g:CSApprox_eterm g:CSApprox_konsole
+
+      if round == 'konsole'
+        let g:CSApprox_konsole = 1
+      elseif round == 'eterm'
+        let g:CSApprox_eterm = 1
+      endif
+
+      if round == 'urxvt'
+        set t_Co=88
+      else
+        set t_Co=256
+      endif
+
       let highlights = s:Highlights()
       call s:FixupGuiInfo(highlights)
-      let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
+
+      if round == 'konsole' || round == 'eterm'
+        let lines += [ 'elseif has("gui_running") || (&t_Co == ' . &t_Co
+                   \ . ' && (&term ==# "xterm" || &term ==# "^screen")'
+                   \ . ' && exists("g:CSApprox_' . round . '")'
+                   \ . ' && g:CSApprox_' . round . ')'
+                   \ . ' || &term =~? "^' . round . '"' ]
+      else
+        let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
+      endif
+
       for hlnum in sort(keys(highlights), "s:SortNormalFirst")
         let hl = highlights[hlnum]
-        let line = '    highlight ' . hl.name
+        let line = '    CSAHi ' . hl.name
         for type in [ 'term', 'cterm', 'gui' ]
           let attrs = [ 'reverse', 'bold', 'italic', 'underline', 'undercurl' ]
           call filter(attrs, 'hl[type][v:val] == 1')
@@ -790,6 +820,8 @@ function! s:CSApproxSnapshot(file, overwrite)
       endfor
     endfor
     let lines += [ 'endif' ]
+    let lines += [ '' ]
+    let lines += [ 'delcommand CSAHi' ]
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
