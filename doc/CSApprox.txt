@@ -255,6 +255,16 @@ g:CSApprox_hook_{scheme}_post                                 *csapprox-hooks*
     let g:CSApprox_hook_desert_post = ['hi Normal ctermbg=NONE ctermfg=NONE',
                                     \ 'hi NonText ctermbg=NONE ctermfg=NONE' ]
 <
+    One final example: If you want CSApprox to be active for nearly all
+    colorschemes, but want one or two particular schemes to be ignored, you
+    can take advantage of the CSApprox logic that skips over any color scheme
+    that is already high color by setting a color to a number above 255.  Note
+    that most colors greater than 15 will work, but some will not - 256 should
+    always work.  For instance, you can prevent CSApprox from modifying the
+    colors of the zellner colorscheme like this:
+>
+    let g:CSApprox_hook_zellner_pre = 'hi _FakeGroup ctermbg=256'
+<
     NOTE: Any characters that would stop the string stored in g:colors_name
           from being a valid variable name will be removed before the
           _{scheme}_ hook is searched.  Basically, this means that first all
