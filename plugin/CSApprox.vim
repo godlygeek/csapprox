@@ -752,6 +752,8 @@ function! s:CSApproxSnapshot(file, overwrite)
 
   let save_t_Co = &t_Co
   let s:inhibit_hicolor_test = 1
+  let save_CSApprox_konsole = g:CSApprox_konsole
+  let save_CSApprox_eterm = g:CSApprox_eterm
 
   try
     let lines = []
@@ -774,7 +776,8 @@ function! s:CSApproxSnapshot(file, overwrite)
 
     let lines += [ 'if 0' ]
     for round in [ 'konsole', 'eterm', 'xterm', 'urxvt' ]
-      sil! unlet g:CSApprox_eterm g:CSApprox_konsole
+      sil! unlet g:CSApprox_eterm
+      sil! unlet g:CSApprox_konsole
 
       if round == 'konsole'
         let g:CSApprox_konsole = 1
@@ -826,6 +829,8 @@ function! s:CSApproxSnapshot(file, overwrite)
   finally
     let &t_Co = save_t_Co
     unlet s:inhibit_hicolor_test
+    let g:CSApprox_konsole = save_CSApprox_konsole
+    let g:CSApprox_eterm = save_CSApprox_eterm
   endtry
 endfunction
 
