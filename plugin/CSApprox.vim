@@ -793,7 +793,7 @@ function! s:CSApproxSnapshot(file, overwrite)
 
       if round == 'konsole' || round == 'eterm'
         let lines += [ 'elseif has("gui_running") || (&t_Co == ' . &t_Co
-                   \ . ' && (&term ==# "xterm" || &term ==# "^screen")'
+                   \ . ' && (&term ==# "xterm" || &term =~# "^screen")'
                    \ . ' && exists("g:CSApprox_' . round . '")'
                    \ . ' && g:CSApprox_' . round . ')'
                    \ . ' || &term =~? "^' . round . '"' ]
