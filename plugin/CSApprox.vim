@@ -1,7 +1,7 @@
-" CSApprox:    Make gvim-only colorschemes work transparently in terminal vim
+" CSApprox:    Make gvim-only colorschemes work terminal vim
 " Maintainer:  Matthew Wozniski (mjw@drexel.edu)
-" Date:        Sun, 14 Dec 2008 06:12:55 -0500
-" Version:     2.00
+" Date:        Wed, 21 Jan 2009 19:21:31 -0500
+" Version:     3.00
 " History:     :help csapprox-changelog
 
 " Whenever you change colorschemes using the :colorscheme command, this script
@@ -83,12 +83,12 @@ function! s:ApproximatePerComponent(r,g,b)
     let colors = s:urxvt_colors
     let type = 'urxvt'
   elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
-       \   && exists('g:CSApprox_konsole'))
+       \   && exists('g:CSApprox_konsole') && g:CSApprox_konsole)
        \ || &term =~? '^konsole'
     let colors = s:konsole_colors
     let type = 'konsole'
   elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
-       \   && exists('g:CSApprox_eterm'))
+       \   && exists('g:CSApprox_eterm') && g:CSApprox_eterm)
        \ || &term =~? '^eterm'
     let colors = s:eterm_colors
     let type = 'eterm'
