@@ -765,11 +765,11 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '    syntax reset' ]
     let lines += [ 'endif' ]
     let lines += [ '' ]
-    let lines += [ 'let g:colors_name = ' . string(fnamemodify(file, ':t:r')) ]
-    let lines += [ '' ]
     let lines += [ 'if v:version < 700' ]
+    let lines += [ '    let g:colors_name = ' . string(fnamemodify(file, ':t:r')) ]
     let lines += [ '    command! -nargs=+ CSAHi exe "hi" substitute(substitute(<q-args>, "undercurl", "underline", "g"), "guisp\\S\\+", "", "g")' ]
     let lines += [ 'else' ]
+    let lines += [ '    let g:colors_name = ' . string(fnamemodify(file, ':t:r')) ]
     let lines += [ '    command! -nargs=+ CSAHi exe "hi" <q-args>' ]
     let lines += [ 'endif' ]
     let lines += [ '' ]
@@ -824,7 +824,9 @@ function! s:CSApproxSnapshot(file, overwrite)
     endfor
     let lines += [ 'endif' ]
     let lines += [ '' ]
-    let lines += [ 'delcommand CSAHi' ]
+    let lines += [ 'if 1' ]
+    let lines += [ '    delcommand CSAHi' ]
+    let lines += [ 'endif' ]
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
