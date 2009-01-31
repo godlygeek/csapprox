@@ -1,7 +1,7 @@
 " CSApprox:    Make gvim-only colorschemes work terminal vim
 " Maintainer:  Matthew Wozniski (mjw@drexel.edu)
-" Date:        Wed, 21 Jan 2009 19:21:31 -0500
-" Version:     3.00
+" Date:        Sat, 31 Jan 2009 04:14:27 -0500
+" Version:     3.05
 " History:     :help csapprox-changelog
 
 " Whenever you change colorschemes using the :colorscheme command, this script
