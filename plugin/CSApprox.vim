@@ -759,6 +759,18 @@ function! s:CSApproxSnapshot(file, overwrite)
     let save_CSApprox_eterm = g:CSApprox_eterm
   endif
 
+  " Needed just like in CSApprox()
+  if exists("g:colors_name")
+    let colors_name = g:colors_name
+    unlet g:colors_name
+  endif
+
+  " Needed just like in CSApprox()
+  if exists("g:syntax_cmd")
+    let syntax_cmd = g:syntax_cmd
+  endif
+  let g:syntax_cmd = "PLEASE DON'T CHANGE ANY COLORS!!!"
+
   try
     let lines = []
     let lines += [ '" This scheme was created by CSApproxSnapshot' ]
@@ -840,6 +852,15 @@ function! s:CSApproxSnapshot(file, overwrite)
     endif
     if exists("save_CSApprox_eterm")
       let g:CSApprox_eterm = save_CSApprox_eterm
+    endif
+
+    if exists("colors_name")
+      let g:colors_name = colors_name
+    endif
+
+    unlet g:syntax_cmd
+    if exists("syntax_cmd")
+      let g:syntax_cmd = syntax_cmd
     endif
   endtry
 endfunction
