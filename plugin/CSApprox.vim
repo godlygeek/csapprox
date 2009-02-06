@@ -118,7 +118,7 @@ function! s:ApproximatePerComponent(r,g,b)
   let b = s:NearestElemInList(a:b, greys_colors)
 
   let len = len(colors)
-  if (r == g && g == b && index(greys, r) > 0)
+  if (r == g && g == b && index(greys, r) != -1)
     let rv = 16 + len * len * len + index(greys, r)
   else
     let r = s:NearestElemInList(a:r, colors)
