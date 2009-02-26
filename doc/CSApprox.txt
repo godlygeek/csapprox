@@ -157,10 +157,18 @@ To turn on high color support without fixing $TERM, you can change t_Co in
 your .vimrc, and set either CSApprox_konsole or CSApprox_eterm if appropriate.
 One way would be to put something like this into your |vimrc|:
 >
-    if (&term == 'xterm' || &term =? '^screen') && hostname() == 'my-machine'
+    if (&term == 'xterm' || &term =~? '^screen') && hostname() == 'my-machine'
         " On my machine, I use Konsole with 256 color support
         set t_Co=256
         let g:CSApprox_konsole = 1
+    endif
+
+Gnome Terminal, as of the time that I am writing this, doesn't support having
+the terminal emulator set $TERM to something adequately descriptive.  In cases
+like this, something like the following would be appropriate:
+>
+    if &term =~ '^\(xterm\|screen\)$' && $COLORTERM == 'gnome-terminal'
+      set t_Co=256
     endif
 
 ==============================================================================
