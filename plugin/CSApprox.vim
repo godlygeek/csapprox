@@ -263,56 +263,35 @@ let s:rgb_defaults = { "lightred"     : "#FFBBBB",
                      \ "grey90"       : "#E5E5E5" }
 
 " {>2} Find and parse rgb.txt
-" Search for an rgb.txt in a set of default directories.  If the user wishes
-" to override the default search path, he can specify a list of other
-" directories to search first in g:CSApprox_extra_rgb_txt_dirs.  When rgb.txt
-" has been located, and verified to be good (by having enough non-blank
-" non-comment correctly formatted lines), the parsed information is stored to
-" the dictionary s:rgb - the keys are color names (in lowercase), the values
-" are strings representing color values (as '#rrggbb').
+" Find the valid named colors using the "showrgb" program.  Store the color
+" names and color values to the dictionary s:rgb - the keys are color names
+" (in lowercase), the values are strings representing color values (as
+" '#rrggbb').
 function! s:UpdateRgbHash()
-  " Pattern for ignored lines - all blanks, or blanks then !
-  let ignorepat = '^\s*\%(!.*\)\=$'
+  " We depend upon the 'showrgb' program to do our work
+  if !executable('showrgb')
+    throw "CSApprox: Can't handle named colors; no 'showrgb' in $PATH"
+  endif
+
+  let s:rgb = copy(s:rgb_defaults)
+  sil! let lines = split(system('showrgb'), '\n')
+
+  if v:shell_error || empty(lines)
+    throw "CSApprox: Can't handle named colors; showrgb failed!"
+  endif
+
   " fmt is (blanks?)(red)(blanks)(green)(blanks)(blue)(blanks)(name)
   let parsepat  = '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(.*\)$'
 
-  let user = []
-  if exists("g:CSApprox_extra_rgb_txt_dirs")
-    if type(g:CSApprox_extra_rgb_txt_dirs) == type([])
-      let user = g:CSApprox_extra_rgb_txt_dirs
-    else
-      let user = [ g:CSApprox_extra_rgb_txt_dirs ]
+  for line in lines
+    let v = matchlist(line, parsepat)
+    if len(v) < 0
+      throw "CSApprox: Bad RGB line: " . string(line)
     endif
-  endif
-
-  for dir in user + [ '/usr/local/share/X11',
-                    \ '/usr/share/X11',
-                    \ '/etc/X11',
-                    \ '/usr/local/lib/X11',
-                    \ '/usr/lib/X11',
-                    \ '/usr/local/X11R6/lib/X11',
-                    \ '/usr/X11R6/lib/X11' ]
-                    \ + split(globpath(&rtp, ''), '\n')
-    let s:rgb = copy(s:rgb_defaults)
-    sil! let lines = readfile(dir . '/rgb.txt')
-
-    for line in lines
-      if line =~ ignorepat
-        continue " Line is blank, entirely spaces, or a comment
-      endif
-      let v = matchlist(line, parsepat)
-      if len(v) > 0
-        let s:rgb[tolower(v[4])] = printf("#%02x%02x%02x", v[1], v[2], v[3])
-      endif
-    endfor
-
-    if len(s:rgb) > 50
-      return 0 " Long enough, must have been valid
-    endif
+    let s:rgb[tolower(v[4])] = printf("#%02x%02x%02x", v[1], v[2], v[3])
   endfor
 
-  let s:rgb = {}
-  throw "Failed to find a valid rgb.txt!"
+  return 0
 endfunction
 
 " {>1} Derive and set cterm attributes
