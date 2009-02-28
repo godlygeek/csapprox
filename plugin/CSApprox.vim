@@ -232,8 +232,9 @@ let s:rgb = {}
 
 " {>2} Builtin gui color names
 " gui_x11.c and gui_gtk_x11.c have some default colors names that are searched
-" if a color is not in rgb.txt. We'll pretend they're in rgb.txt with these
-" values, and overwrite them with a different value if we find them...
+" if the x server doesn't know about a color.  If 'showrgb' is available,
+" we'll default to using these color names and values, and overwrite them with
+" other values if 'showrgb' tells us about those colors.
 let s:rgb_defaults = { "lightred"     : "#FFBBBB",
                      \ "lightgreen"   : "#88FF88",
                      \ "lightmagenta" : "#FFBBFF",
@@ -262,34 +263,43 @@ let s:rgb_defaults = { "lightred"     : "#FFBBBB",
                      \ "gray90"       : "#E5E5E5",
                      \ "grey90"       : "#E5E5E5" }
 
-" {>2} Find and parse rgb.txt
-" Find the valid named colors using the "showrgb" program.  Store the color
-" names and color values to the dictionary s:rgb - the keys are color names
-" (in lowercase), the values are strings representing color values (as
-" '#rrggbb').
+" {>2} Find available color names
+" Find the valid named colors.  If it is available, use the "showrgb" program,
+" otherwise use our own copy of rgb.txt (needed on OS X and systems without
+" xorg).  Store the color names and color values to the dictionary s:rgb - the
+" keys are color names (in lowercase), the values are strings representing
+" color values (as '#rrggbb').
 function! s:UpdateRgbHash()
-  " We depend upon the 'showrgb' program to do our work
-  if !executable('showrgb')
-    throw "CSApprox: Can't handle named colors; no 'showrgb' in $PATH"
-  endif
+  try
+    " We want to use the 'showrgb' program, if it's around
+    let lines = split(system('showrgb'), '\n')
 
-  let s:rgb = copy(s:rgb_defaults)
-  sil! let lines = split(system('showrgb'), '\n')
-
-  if v:shell_error || empty(lines)
-    throw "CSApprox: Can't handle named colors; showrgb failed!"
-  endif
-
-  " fmt is (blanks?)(red)(blanks)(green)(blanks)(blue)(blanks)(name)
-  let parsepat  = '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(.*\)$'
-
-  for line in lines
-    let v = matchlist(line, parsepat)
-    if len(v) < 0
-      throw "CSApprox: Bad RGB line: " . string(line)
+    if v:shell_error || !exists('lines') || empty(lines)
+      throw "'showrgb' didn't give us an rgb.txt"
     endif
-    let s:rgb[tolower(v[4])] = printf("#%02x%02x%02x", v[1], v[2], v[3])
-  endfor
+
+    let s:rgb = copy(s:rgb_defaults)
+
+    " fmt is (blanks?)(red)(blanks)(green)(blanks)(blue)(blanks)(name)
+    let parsepat  = '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(.*\)$'
+
+    for line in lines
+      let v = matchlist(line, parsepat)
+      if len(v) < 0
+        throw "CSApprox: Bad RGB line: " . string(line)
+      endif
+      let s:rgb[tolower(v[4])] = printf("#%02x%02x%02x", v[1], v[2], v[3])
+    endfor
+  catch
+    try
+      let s:rgb = copy(csapprox#rgb())
+    catch
+      echohl ErrorMsg
+      echomsg "Can't call rgb() from autoload/csapprox.vim"
+      echomsg "Named colors will not be available!"
+      echohl None
+    endtry
+  endtry
 
   return 0
 endfunction
