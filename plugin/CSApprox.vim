@@ -168,7 +168,7 @@ endfunction
 " numbers for keys and values that are dictionaries with four keys each,
 " 'name', 'term', 'cterm', and 'gui'.  'name' holds the group name, and each
 " of the others holds highlight information for that particular mode.
-function! s:Highlights()
+function! s:Highlights(modes)
   let rv = {}
 
   let i = 0
@@ -188,7 +188,7 @@ function! s:Highlights()
     let rv[i] = {}
     let rv[i].name = synIDattr(i, "name")
 
-    for where in [ "term", "cterm", "gui" ]
+    for where in a:modes
       let rv[i][where]  = {}
       for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
         let rv[i][where][attr] = synIDattr(i, attr, where)
@@ -384,6 +384,10 @@ endfunction
 " color, he should map it to either 'fg' or 'bg' using g:CSApprox_attr_map.
 function! s:FixupCtermInfo(highlights)
   for hl in values(a:highlights)
+
+    if !has_key(hl, 'cterm')
+      let hl["cterm"] = {}
+    endif
 
     " Find attributes to be set in the terminal
     for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
@@ -669,7 +673,7 @@ function! s:CSApproxImpl()
   endif
 
   " Get the current highlight colors
-  let highlights = s:Highlights()
+  let highlights = s:Highlights(["gui"])
 
   let hinums = keys(highlights)
 
@@ -681,17 +685,17 @@ function! s:CSApproxImpl()
   " XXX: s:inhibit_hicolor_test allows this test to be skipped for snapshots
   if !exists("s:inhibit_hicolor_test") || !s:inhibit_hicolor_test
     for hlid in hinums
-      let val = highlights[hlid]
-      if   (    val.cterm.bg > 15
-            \ && index(s:presets_{&t_Co}, str2nr(val.cterm.bg)) < 0)
-            \ || (    val.cterm.fg > 15
-            \ && index(s:presets_{&t_Co}, str2nr(val.cterm.fg)) < 0)
-        " The value is set above 15, and wasn't set by vim.
-        if &verbose >= 2
-          echomsg 'CSApprox: Exiting - high color found for' val.name
+      for type in [ 'bg', 'fg' ]
+        let color = synIDattr(hlid, type, 'cterm')
+
+        if color > 15 && index(s:presets_{&t_Co}, str2nr(color)) < 0
+          " The value is set above 15, and wasn't set by vim.
+          if &verbose >= 2
+            echomsg 'CSApprox: Exiting - high' type 'color found for' highlights[hlid].name
+          endif
+          return
         endif
-        return
-      endif
+      endfor
     endfor
   endif
 
@@ -797,7 +801,8 @@ function! s:CSApproxSnapshot(file, overwrite)
       endif
 
       call s:CSApprox()
-      let highlights = s:Highlights()
+
+      let highlights = s:Highlights(["term", "cterm", "gui"])
       call s:FixupGuiInfo(highlights)
 
       if round == 'konsole' || round == 'eterm'
