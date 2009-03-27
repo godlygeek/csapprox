@@ -796,6 +796,7 @@ function! s:CSApproxSnapshot(file, overwrite)
         set t_Co=256
       endif
 
+      call s:CSApprox()
       let highlights = s:Highlights()
       call s:FixupGuiInfo(highlights)
 
