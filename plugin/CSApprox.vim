@@ -194,24 +194,14 @@ function! s:Highlights(modes)
         let rv[i][where][attr] = synIDattr(i, attr, where)
       endfor
 
-      for attr in [ "fg", "bg", "sp" ]
+      for attr in [ "fg", "bg" ]
         let rv[i][where][attr] = synIDattr(i, attr.'#', where)
       endfor
 
-      if s:NeedRedirFallback()
-        redir => temp
-        exe 'sil hi ' . rv[i].name
-        redir END
-        let temp = matchstr(temp, where.'sp=\zs.*')
-        if len(temp) == 0 || temp[0] =~ '\s'
-          let temp = ""
-        else
-          " Make sure we can handle guisp='dark red'
-          let temp = substitute(temp, '[\x00].*', '', '')
-          let temp = substitute(temp, '\s*\(c\=term\|gui\).*', '', '')
-          let temp = substitute(temp, '\s*$', '', '')
-        endif
-        let rv[i][where]["sp"] = temp
+      if where == "gui"
+        let rv[i][where]["sp"] = s:SynGuiSp(i, rv[i].name)
+      else
+        let rv[i][where]["sp"] = -1
       endif
 
       for attr in [ "fg", "bg", "sp" ]
@@ -223,6 +213,39 @@ function! s:Highlights(modes)
   endwhile
 
   return rv
+endfunction
+
+" {>2} Retrieve guisp
+
+" Get guisp using whichever method is specified by _redir_fallback
+function! s:SynGuiSp(idx, name)
+  if !s:NeedRedirFallback()
+    return s:SynGuiSpAttr(a:idx)
+  else
+    return s:SynGuiSpRedir(a:name)
+  endif
+endfunction
+
+" {>3} Implementation for retrieving guisp with redir hack
+function! s:SynGuiSpRedir(name)
+  redir => temp
+  exe 'sil hi ' . a:name
+  redir END
+  let temp = matchstr(temp, 'guisp=\zs.*')
+  if len(temp) == 0 || temp[0] =~ '\s'
+    let temp = ""
+  else
+    " Make sure we can handle guisp='dark red'
+    let temp = substitute(temp, '[\x00].*', '', '')
+    let temp = substitute(temp, '\s*\(c\=term\|gui\).*', '', '')
+    let temp = substitute(temp, '\s*$', '', '')
+  endif
+  return temp
+endfunction
+
+" {>3} Implementation for retrieving guisp with synIDattr()
+function! s:SynGuiSpAttr(idx)
+  return synIDattr(a:idx, 'sp#', 'gui')
 endfunction
 
 " {>1} Handle color names
