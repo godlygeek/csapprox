@@ -562,21 +562,6 @@ let s:presets_256 += [224] " LightRed
 let s:presets_256 += [225] " LightMagenta
 let s:presets_256 += [229] " LightYellow
 
-" {>2} Highlight comparator
-" Comparator that sorts numbers matching the highlight id of the 'Normal'
-" group before anything else; all others stay in random order.  This allows us
-" to ensure that the Normal group is the first group we set.  If it weren't,
-" we could get E419 or E420 if a later color used guibg=bg or the likes.
-function! s:SortNormalFirst(num1, num2)
-  if a:num1 == s:hlid_normal && a:num1 != a:num2
-    return -1
-  elseif a:num2 == s:hlid_normal && a:num1 != a:num2
-    return 1
-  else
-    return 0
-  endif
-endfunction
-
 " {>2} Wrapper around :exe to allow :executing multiple commands.
 " "cmd" is the command to be :executed.
 " If the variable is a String, it is :executed.
@@ -730,7 +715,7 @@ function! s:CSApproxImpl()
   call s:FixupCtermInfo(highlights)
 
   " We need to set the Normal group first so 'bg' and 'fg' work as colors
-  call sort(hinums, "s:SortNormalFirst")
+  call insert(hinums, remove(hinums, index(hinums, string(s:hlid_normal))))
 
   " then set each color's cterm attributes to match gui
   for hlid in hinums
@@ -842,7 +827,11 @@ function! s:CSApproxSnapshot(file, overwrite)
         let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
       endif
 
-      for hlnum in sort(keys(highlights), "s:SortNormalFirst")
+      let hinums = keys(highlights)
+
+      call insert(hinums, remove(hinums, index(hinums, string(s:hlid_normal))))
+
+      for hlnum in hinums
         let hl = highlights[hlnum]
         let line = '    CSAHi ' . hl.name
         for type in [ 'term', 'cterm', 'gui' ]
