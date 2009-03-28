@@ -294,6 +294,10 @@ let s:rgb_defaults = { "lightred"     : "#FFBBBB",
 " color values (as '#rrggbb').
 function! s:UpdateRgbHash()
   try
+    if !exists("g:CSApprox_use_showrgb") || !g:CSApprox_use_showrgb
+      throw "Not using showrgb"
+    endif
+
     " We want to use the 'showrgb' program, if it's around
     let lines = split(system('showrgb'), '\n')
 
@@ -496,9 +500,9 @@ function! s:SetCtermFromGui(hl)
       let hl.cterm[which] = val
     elseif val =~ '^#\=\x\{6}$'
       let val = substitute(val, '^#', '', '')
-      let r = str2nr(val[0] . val[1], 16)
-      let g = str2nr(val[2] . val[3], 16)
-      let b = str2nr(val[4] . val[5], 16)
+      let r = str2nr(val[0:1], 16)
+      let g = str2nr(val[2:3], 16)
+      let b = str2nr(val[4:5], 16)
       let hl.cterm[which] = g:CSApprox_approximator_function(r, g, b)
       exe 'hi ' . hl.name . ' cterm' . which . '=' . hl.cterm[which]
     else

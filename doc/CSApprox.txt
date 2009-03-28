@@ -300,6 +300,14 @@ g:CSApprox_hook_{scheme}_post                                 *csapprox-hooks*
           colorscheme named "123 foo_bar-baz456.vim", the hook searched for
           will be, eg, g:CSApprox_hook_foo_barbaz456_post
 
+g:CSApprox_use_showrgb                                *g:CSApprox_use_showrgb*
+    By default, CSApprox will use a built in mapping of color names to values.
+    This optimization greatly helps speed, but means that colors addressed by
+    name might not match up perfectly between gvim (which uses the system's
+    real rgb database) and CSApprox (which uses the builtin database).  To
+    force CSApprox to try the systemwide database first, and only fall back on
+    the builtin database if it isn't available, set this variable non-zero.
+
 g:CSApprox_approximator_function            *g:CSApprox_approximator_function*
     If the default approximation function doesn't work well enough, the user
     (or another author wishing to extend this plugin) can write another
