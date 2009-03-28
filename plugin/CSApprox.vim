@@ -19,7 +19,7 @@
 " Quit if the user doesn't want or need us or is missing the gui feature.  We
 " need +gui to be able to check the gui color settings; vim doesn't bother to
 " store them if it is not built with +gui.
-if ! has("gui") || exists('g:CSApprox_loaded')
+if !has('gui') || exists('g:CSApprox_loaded')
   " XXX This depends upon knowing the default for g:CSApprox_verbose_level
   let s:verbose = 1
   if exists("g:CSApprox_verbose_level")
@@ -836,7 +836,7 @@ function! s:CSApproxSnapshot(file, overwrite)
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
-    unlet s:inhibit_hicolor_test
+
     if exists("save_CSApprox_konsole")
       let g:CSApprox_konsole = save_CSApprox_konsole
     endif
@@ -852,6 +852,10 @@ function! s:CSApproxSnapshot(file, overwrite)
     if exists("syntax_cmd")
       let g:syntax_cmd = syntax_cmd
     endif
+
+    call s:CSApprox()
+
+    unlet s:inhibit_hicolor_test
   endtry
 endfunction
 
