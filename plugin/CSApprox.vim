@@ -345,44 +345,50 @@ endfunction
 " can look up, to string values, representing the attribute mapped to or an
 " empty string to disable the given attribute entirely.
 function! s:attr_map(attr)
-  let attr = tolower(a:attr)
+  let rv = get(g:CSApprox_attr_map, a:attr, a:attr)
 
-  if attr == 'inverse'
-    let attr = 'reverse'
-  endif
+  return rv
+endfunction
+
+function! s:NormalizeAttrMap(map)
+  let old = copy(a:map)
+  let new = filter(a:map, '0')
 
   let valid_attrs = [ 'bg', 'fg', 'sp', 'bold', 'italic',
                     \ 'reverse', 'underline', 'undercurl' ]
 
-  if index(valid_attrs, attr) == -1
-    throw "Looking up invalid attribute '" . attr . "'"
-  endif
-
-  if !exists("g:CSApprox_attr_map") || type(g:CSApprox_attr_map) != type({})
-    let g:CSApprox_attr_map = { 'italic' : 'underline', 'sp' : 'fg' }
-  endif
-
-  let rv = get(g:CSApprox_attr_map, attr, attr)
-
-  if index(valid_attrs, rv) == -1 && rv != ''
-    " The user mapped 'attr' to something invalid
-    throw "Bad attr map: '" . attr . "' to unknown attribute '" . rv . "'"
-  endif
-
   let colorattrs = [ 'fg', 'bg', 'sp' ]
-  if rv != '' && !!(index(colorattrs, attr)+1) != !!(index(colorattrs, rv)+1)
-    " The attribute the user mapped to was valid, but of a different type.
-    throw "Bad attr map: Can't map color attr to boolean (".attr."->".rv.")"
-  endif
 
-  if rv == 'inverse'
-    let rv = 'reverse' " Internally always use 'reverse' instead of 'inverse'
-  elseif rv == 'sp'
-    " Terminals can't handle the guisp attribute; disable it if it was left on
-    let rv = ''
-  endif
+  for olhs in keys(old)
+    if olhs ==? 'inverse'
+      let nlhs = 'reverse'
+    endif
 
-  return rv
+    let orhs = old[olhs]
+
+    if orhs ==? 'inverse'
+      let nrhs = 'reverse'
+    endif
+
+    let nlhs = tolower(olhs)
+    let nrhs = tolower(orhs)
+
+    try
+      if index(valid_attrs, nlhs) == -1
+        echomsg "CSApprox: Bad attr map (removing unrecognized attribute " . olhs . ")"
+      elseif nrhs != '' && index(valid_attrs, nrhs) == -1
+        echomsg "CSApprox: Bad attr map (removing unrecognized attribute " . orhs . ")"
+      elseif nrhs != '' && !!(index(colorattrs, nlhs)+1) != !!(index(colorattrs, nrhs)+1)
+        echomsg "CSApprox: Bad attr map (removing " . olhs . "; type mismatch with " . orhs . ")"
+      elseif nrhs == 'sp'
+        echomsg "CSApprox: Bad attr map (removing " . olhs . "; can't map to 'sp')"
+      else
+        let new[nlhs] = nrhs
+      endif
+    catch
+      echo v:exception
+    endtry
+  endfor
 endfunction
 
 " {>2} Normalize the GUI settings of a highlight group
@@ -625,6 +631,12 @@ function! s:CSApprox()
     let savelz  = &lz
 
     set lz
+
+    if exists("g:CSApprox_attr_map") && type(g:CSApprox_attr_map) == type({})
+      call s:NormalizeAttrMap(g:CSApprox_attr_map)
+    else
+      let g:CSApprox_attr_map = { 'italic' : 'underline', 'sp' : 'fg' }
+    endif
 
     " colors_name must be unset and reset, or vim will helpfully reload the
     " colorscheme when we set the background for the Normal group.
