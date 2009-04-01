@@ -344,7 +344,7 @@ function! s:UpdateRgbHash()
     endfor
   catch
     try
-      let s:rgb = copy(csapprox#rgb())
+      let s:rgb = csapprox#rgb()
     catch
       echohl ErrorMsg
       echomsg "Can't call rgb() from autoload/csapprox.vim"
