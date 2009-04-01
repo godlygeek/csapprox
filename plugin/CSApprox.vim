@@ -286,6 +286,31 @@ let s:rgb_defaults = { "lightred"     : "#FFBBBB",
                      \ "gray90"       : "#E5E5E5",
                      \ "grey90"       : "#E5E5E5" }
 
+" Colors that vim will use by name in one of the default schemes, either for
+" bg=light or for bg=dark.  This lets us avoid loading the entire rgb.txt
+" database when the scheme itself doesn't ask for colors by name.
+let s:rgb_presets = { "black"         : "#000000",
+                     \ "blue"         : "#0000ff",
+                     \ "brown"        : "#a52a2a",
+                     \ "cyan"         : "#00ffff",
+                     \ "darkblue"     : "#00008b",
+                     \ "darkcyan"     : "#008b8b",
+                     \ "darkgrey"     : "#a9a9a9",
+                     \ "darkmagenta"  : "#8b008b",
+                     \ "green"        : "#00ff00",
+                     \ "grey"         : "#bebebe",
+                     \ "grey40"       : "#666666",
+                     \ "grey90"       : "#e5e5e5",
+                     \ "lightblue"    : "#add8e6",
+                     \ "lightcyan"    : "#e0ffff",
+                     \ "lightgrey"    : "#d3d3d3",
+                     \ "lightmagenta" : "#ffbbff",
+                     \ "magenta"      : "#ff00ff",
+                     \ "red"          : "#ff0000",
+                     \ "seagreen"     : "#2e8b57",
+                     \ "white"        : "#ffffff",
+                     \ "yellow"       : "#ffff00" }
+
 " {>2} Find available color names
 " Find the valid named colors.  If it is available, use the "showrgb" program,
 " otherwise use our own copy of rgb.txt (needed on OS X and systems without
@@ -488,16 +513,23 @@ function! s:SetCtermFromGui(hl)
     " Try translating anything but 'fg', 'bg', #rrggbb, and rrggbb from an
     " rgb.txt color to a #rrggbb color
     if val !~? '^[fb]g$' && val !~ '^#\=\x\{6}$'
-      if empty(s:rgb)
-        call s:UpdateRgbHash()
-      endif
       try
-        let val = s:rgb[tolower(val)]
+        " First see if it is in our preset-by-vim rgb list
+        let val = s:rgb_presets[tolower(val)]
       catch
-        if &verbose
-          echomsg "CSApprox: Colorscheme uses unknown color \"" . val . "\""
+        " Then try loading and checking our real rgb list
+        if empty(s:rgb)
+          call s:UpdateRgbHash()
         endif
-        continue
+        try
+          let val = s:rgb[tolower(val)]
+        catch
+          " And then barf if we still haven't found it
+          if &verbose
+            echomsg "CSApprox: Colorscheme uses unknown color \"" . val . "\""
+          endif
+          continue
+        endtry
       endtry
     endif
 
