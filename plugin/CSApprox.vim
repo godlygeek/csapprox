@@ -1,17 +1,52 @@
-" CSApprox:    Make gvim-only colorschemes work terminal vim
+" CSApprox:    Make gvim-only colorschemes Just Work terminal vim
 " Maintainer:  Matthew Wozniski (mjw@drexel.edu)
-" Date:        Sat, 31 Jan 2009 04:14:27 -0500
-" Version:     3.05
+" Date:        Wed, 01 Apr 2009 22:10:19 -0400
+" Version:     3.50
 " History:     :help csapprox-changelog
-
-" Whenever you change colorschemes using the :colorscheme command, this script
-" will be executed.  If you're running in 256 color terminal or an 88 color
-" terminal, as reported by the command ":set t_Co?", it will take the colors
-" that the scheme specified for use in the gui and use an approximation
-" algorithm to try to gracefully degrade them to the closest color available.
-" If you are running in a gui or if t_Co is reported as less than 88 colors,
-" no changes are made.  Also, no changes will be made if the colorscheme seems
-" to have been high color already.
+"
+" Long Description:
+" It's hard to find colorschemes for terminal Vim.  Most colorschemes are
+" written to only support GVim, and don't work at all in terminal Vim.
+"
+" This plugin makes GVim-only colorschemes Just Work in terminal Vim, as long
+" as the terminal supports 88 or 256 colors - and most do these days.  This
+" usually requires no user interaction (but see below for what to do if things
+" don't Just Work).  After getting this plugin happily installed, any time you
+" use :colorscheme it will do its magic and make the colorscheme Just Work.
+"
+" Whenever you change colorschemes using the :colorscheme command this script
+" will be executed.  It will take the colors that the scheme specified for use
+" in the GUI and use an approximation algorithm to try to gracefully degrade
+" them to the closest color available in your terminal.  If you are running in
+" a GUI or if your terminal doesn't support 88 or 256 colors, no changes are
+" made.  Also, no changes will be made if the colorscheme seems to have been
+" high color already.
+"
+" License:
+" Copyright (c) 2009, Matthew J. Wozniski
+" All rights reserved.
+"
+" Redistribution and use in source and binary forms, with or without
+" modification, are permitted provided that the following conditions are met:
+"     * Redistributions of source code must retain the above copyright notice,
+"       this list of conditions and the following disclaimer.
+"     * Redistributions in binary form must reproduce the above copyright
+"       notice, this list of conditions and the following disclaimer in the
+"       documentation and/or other materials provided with the distribution.
+"     * The names of the contributors may not be used to endorse or promote
+"       products derived from this software without specific prior written
+"       permission.
+"
+" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ``AS IS'' AND ANY EXPRESS
+" OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
+" NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT,
+" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+" OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+" LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+" NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 " {>1} Basic plugin setup
 
@@ -66,8 +101,8 @@ endfunc
 " {>2} Approximator
 " Takes 3 decimal values for r, g, and b, and returns the closest cube number.
 " Uses &term to determine which cube should be used, though if &term is set to
-" "xterm" the variables g:CSApprox_eterm and g:CSApprox_konsole can be used to
-" change the default palette.
+" "xterm" or begins with "screen", the variables g:CSApprox_eterm and
+" g:CSApprox_konsole can be used to select a different palette.
 "
 " This approximator considers closeness based upon the individiual components.
 " For each of r, g, and b, it finds the closest cube component available on
@@ -286,8 +321,8 @@ let s:rgb_defaults = { "lightred"     : "#FFBBBB",
                      \ "gray90"       : "#E5E5E5",
                      \ "grey90"       : "#E5E5E5" }
 
-" Colors that vim will use by name in one of the default schemes, either for
-" bg=light or for bg=dark.  This lets us avoid loading the entire rgb.txt
+" {>2} Colors that vim will use by name in one of the default schemes, either
+" for bg=light or for bg=dark.  This lets us avoid loading the entire rgb.txt
 " database when the scheme itself doesn't ask for colors by name.
 let s:rgb_presets = { "black"         : "#000000",
                      \ "blue"         : "#0000ff",
@@ -312,11 +347,11 @@ let s:rgb_presets = { "black"         : "#000000",
                      \ "yellow"       : "#ffff00" }
 
 " {>2} Find available color names
-" Find the valid named colors.  If it is available, use the "showrgb" program,
-" otherwise use our own copy of rgb.txt (needed on OS X and systems without
-" xorg).  Store the color names and color values to the dictionary s:rgb - the
-" keys are color names (in lowercase), the values are strings representing
-" color values (as '#rrggbb').
+" Find the valid named colors.  By default, use our own rgb list, but try to
+" retrieve the system's list if g:CSApprox_use_showrgb is set to true.  Store
+" the color names and color values to the dictionary s:rgb - the keys are
+" color names (in lowercase), the values are strings representing color values
+" (as '#rrggbb').
 function! s:UpdateRgbHash()
   try
     if !exists("g:CSApprox_use_showrgb") || !g:CSApprox_use_showrgb
