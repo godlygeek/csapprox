@@ -77,110 +77,6 @@ let g:CSApprox_loaded = 1
 let s:savecpo = &cpo
 set cpo&vim
 
-" {>1} Built-in approximation algorithm
-
-" {>2} Cube definitions
-let s:xterm_colors   = [ 0x00, 0x5F, 0x87, 0xAF, 0xD7, 0xFF ]
-let s:eterm_colors   = [ 0x00, 0x2A, 0x55, 0x7F, 0xAA, 0xD4 ]
-let s:konsole_colors = [ 0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF ]
-let s:xterm_greys    = [ 0x08, 0x12, 0x1C, 0x26, 0x30, 0x3A,
-                       \ 0x44, 0x4E, 0x58, 0x62, 0x6C, 0x76,
-                       \ 0x80, 0x8A, 0x94, 0x9E, 0xA8, 0xB2,
-                       \ 0xBC, 0xC6, 0xD0, 0xDA, 0xE4, 0xEE ]
-
-let s:urxvt_colors   = [ 0x00, 0x8B, 0xCD, 0xFF ]
-let s:urxvt_greys    = [ 0x2E, 0x5C, 0x73, 0x8B,
-                       \ 0xA2, 0xB9, 0xD0, 0xE7 ]
-
-" {>2} Integer comparator
-" Used to sort the complete list of possible colors
-function! s:IntCompare(i1, i2)
-  return a:i1 == a:i2 ? 0 : a:i1 > a:i2 ? 1 : -1
-endfunc
-
-" {>2} Approximator
-" Takes 3 decimal values for r, g, and b, and returns the closest cube number.
-" Uses &term to determine which cube should be used, though if &term is set to
-" "xterm" or begins with "screen", the variables g:CSApprox_eterm and
-" g:CSApprox_konsole can be used to select a different palette.
-"
-" This approximator considers closeness based upon the individiual components.
-" For each of r, g, and b, it finds the closest cube component available on
-" the cube.  If the three closest matches can combine to form a valid color,
-" this color is used, otherwise we repeat the search with the greys removed,
-" meaning that the three new matches must make a valid color when combined.
-function! s:ApproximatePerComponent(r,g,b)
-  let hex = printf("%02x%02x%02x", a:r, a:g, a:b)
-
-  let greys  = (&t_Co == 88 ? s:urxvt_greys : s:xterm_greys)
-
-  if &t_Co == 88
-    let colors = s:urxvt_colors
-    let type = 'urxvt'
-  elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
-       \   && exists('g:CSApprox_konsole') && g:CSApprox_konsole)
-       \ || &term =~? '^konsole'
-    let colors = s:konsole_colors
-    let type = 'konsole'
-  elseif ((&term ==# 'xterm' || &term =~# '^screen' || &term==# 'builtin_gui')
-       \   && exists('g:CSApprox_eterm') && g:CSApprox_eterm)
-       \ || &term =~? '^eterm'
-    let colors = s:eterm_colors
-    let type = 'eterm'
-  else
-    let colors = s:xterm_colors
-    let type = 'xterm'
-  endif
-
-  if !exists('s:approximator_cache_'.type)
-    let s:approximator_cache_{type} = {}
-  endif
-
-  let rv = get(s:approximator_cache_{type}, hex, -1)
-  if rv != -1
-    return rv
-  endif
-
-  " Only obtain sorted list once
-  if !exists("s:".type."_greys_colors")
-    let s:{type}_greys_colors = sort(greys + colors, "s:IntCompare")
-  endif
-
-  let greys_colors = s:{type}_greys_colors
-
-  let r = s:NearestElemInList(a:r, greys_colors)
-  let g = s:NearestElemInList(a:g, greys_colors)
-  let b = s:NearestElemInList(a:b, greys_colors)
-
-  let len = len(colors)
-  if (r == g && g == b && index(greys, r) != -1)
-    let rv = 16 + len * len * len + index(greys, r)
-  else
-    let r = s:NearestElemInList(a:r, colors)
-    let g = s:NearestElemInList(a:g, colors)
-    let b = s:NearestElemInList(a:b, colors)
-    let rv = index(colors, r) * len * len
-         \ + index(colors, g) * len
-         \ + index(colors, b)
-         \ + 16
-  endif
-
-  let s:approximator_cache_{type}[hex] = rv
-  return rv
-endfunction
-
-" {>2} Color comparator
-" Finds the nearest element to the given element in the given list
-function! s:NearestElemInList(elem, list)
-  let len = len(a:list)
-  for i in range(len-1)
-    if (a:elem <= (a:list[i] + a:list[i+1]) / 2)
-      return a:list[i]
-    endif
-  endfor
-  return a:list[len-1]
-endfunction
-
 " {>1} Collect info for the set highlights
 
 " {>2} Determine if synIDattr is usable
@@ -531,7 +427,8 @@ function! s:SetCtermFromGui(hl)
 
   " Set up the default approximator function, if needed
   if !exists("g:CSApprox_approximator_function")
-    let g:CSApprox_approximator_function=function("s:ApproximatePerComponent")
+    let g:CSApprox_approximator_function =
+          \ function("csapprox#per_component#Approximate")
   endif
 
   " Clear existing highlights
