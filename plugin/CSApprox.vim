@@ -590,8 +590,15 @@ endfunction
 " main function.  This allows us to default to a message whenever any error,
 " even a recoverable one, occurs, meaning the user quickly finds out when
 " something's wrong, but makes it very easy for the user to make us silent.
-function! s:CSApprox()
+function! s:CSApprox(...)
   try
+    if a:0 == 1 && a:1
+      if !exists('s:inhibit_hicolor_test')
+        let s:inhibit_hicolor_test = 0
+      endif
+      let s:inhibit_hicolor_test += 1
+    endif
+
     let savelz  = &lz
 
     set lz
@@ -641,6 +648,13 @@ function! s:CSApprox()
     endif
 
     let &lz   = savelz
+
+    if a:0 == 1 && a:1
+      let s:inhibit_hicolor_test -= 1
+      if s:inhibit_hicolor_test == 0
+        unlet s:inhibit_hicolor_test
+      endif
+    endif
   endtry
 endfunction
 
@@ -859,6 +873,9 @@ endfunction
 " {>2} Snapshot user command
 command! -bang -nargs=1 -complete=file -bar CSApproxSnapshot
         \ call s:CSApproxSnapshot(<f-args>, strlen("<bang>"))
+
+" {>2} Manual updates
+command -bang -bar CSApprox call s:CSApprox(strlen("<bang>"))
 
 " {>1} Hooks
 

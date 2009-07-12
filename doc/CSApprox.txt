@@ -80,6 +80,18 @@ NOTE: Although :CSApproxSnapshot can be used in both GVim and terminal Vim,
       running in a terminal than running in the GUI, and there's no way for
       terminal Vim to figure out what color would have been used in GVim.
 
+                                                                   *:CSApprox*
+A command is also provided to run the approximation manually.  This might be
+useful if some colors were set outside of a colorscheme file, for instance.
+By default, it will not change any colors unless no highlight group is set to
+a color above 15, which is CSApprox's normal behavior.  This probably isn't
+useful in most use cases, though.  On the other hand, if a ! is provided,
+CSApprox will skip that test and update the cterm value for every highlight
+group from the corresponding gui color.  Syntax:
+>
+    :CSApprox[!]
+<
+
 ==============================================================================
 2. Requirements                                        *csapprox-requirements*
 
@@ -427,6 +439,14 @@ Transparently adapting schemes is slow.
 
   NOTE: As of CSApprox 3.50, the overhead is down to about 0.10 seconds on my
         test machine.
+
+It isn't possible to approximate only a particular set of groups.
+
+  Unfortunately, the :CSApprox command will always update all groups, even if
+  only a small set of groups has changed.  A future improvement would be to
+  provide a function called, say, CSApprox(), that takes an optional list of
+  highlight groups (default: all) and only does approximation for those
+  groups.
 
 ==============================================================================
 6. Appendix - Terminals and Palettes                  *csapprox-terminal-list*
