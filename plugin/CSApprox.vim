@@ -54,19 +54,14 @@
 " Quit if the user doesn't want or need us or is missing the gui feature.  We
 " need +gui to be able to check the gui color settings; vim doesn't bother to
 " store them if it is not built with +gui.
-if !has('gui') || exists('g:CSApprox_loaded')
-  " XXX This depends upon knowing the default for g:CSApprox_verbose_level
-  let s:verbose = 1
-  if exists("g:CSApprox_verbose_level")
-    let s:verbose  = g:CSApprox_verbose_level
-  endif
-
-  if ! has('gui') && s:verbose > 0
+if exists('g:CSApprox_loaded')
+  finish
+elseif ! has('gui')
+  " Warn unless the user set g:CSApprox_verbose_level to zero.
+  if get(g:, 'CSApprox_verbose_level', 1)
     echomsg "CSApprox needs gui support - not loading."
     echomsg "  See :help |csapprox-+gui| for possible workarounds."
   endif
-
-  unlet s:verbose
 
   finish
 endif
