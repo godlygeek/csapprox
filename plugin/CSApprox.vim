@@ -410,6 +410,11 @@ function! s:FixupCtermInfo(highlights)
   endfor
 endfunction
 
+" {>2} Kludge around inability to reference autoload functions
+function! s:DefaultApproximator(...)
+  return call('csapprox#per_component#Approximate', a:000)
+endfunction
+
 " {>2} Set cterm colors for a highlight group
 " Given the information for a single highlight group (ie, the value of
 " one of the items in s:Highlights() already normalized with s:FixupCtermInfo
@@ -422,8 +427,7 @@ function! s:SetCtermFromGui(hl)
 
   " Set up the default approximator function, if needed
   if !exists("g:CSApprox_approximator_function")
-    let g:CSApprox_approximator_function =
-          \ function("csapprox#per_component#Approximate")
+    let g:CSApprox_approximator_function = function("s:DefaultApproximator")
   endif
 
   " Clear existing highlights
