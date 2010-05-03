@@ -886,12 +886,6 @@ augroup CSApprox
   "au User CSApproxPost highlight Normal ctermbg=none | highlight NonText ctermbg=None
 augroup END
 
-" {>2} Execute
-" The last thing to do when sourced is to run and actually fix up the colors.
-if !has('gui_running')
-  call s:CSApprox()
-endif
-
 " {>1} Restore compatibility options
 let &cpo = s:savecpo
 unlet s:savecpo
