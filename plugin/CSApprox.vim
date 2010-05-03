@@ -665,7 +665,7 @@ endfunction
 function! s:CSApproxImpl()
   " Return if not running in an 88/256 color terminal
   if &t_Co != 256 && &t_Co != 88
-    if &verbose && !has('gui_running')
+    if &verbose && &t_Co != ''
       echomsg "CSApprox skipped; terminal only has" &t_Co "colors, not 88/256"
       echomsg "Try checking :help csapprox-terminal for workarounds"
     endif
