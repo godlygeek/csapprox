@@ -146,20 +146,41 @@ set to something that implies high color support.  Possible choices include
 "xterm-256color" for 256 color support and "rxvt-unicode" for 88 color
 support.
                                                               *csapprox-palettes*
-Also, there are three different 256 color cube palettes available and CSApprox
-has no way to tell which you're using unless $TERM is set to something that is
-specific to the terminal, like "konsole-256color" or "Eterm".  Because of this, the
-most sane behavior is assuming the user is using the most popular palette,
-which is used by all but Konsole and Eterm, whenever $TERM is set to something
-generic like "xterm" or "screen".  You can override this default, however -
-see |csapprox-configure|.
+Also, there are at least three different 256-color palettes in use.  Nearly
+all terminals use an xterm-compatible palette, so most users need not concern
+themselves with this, with only two exceptions:  Eterm uses a slightly
+different palette, and older Konsole (pre KDE 2.2.0) used a third palette.
+CSApprox has no reliable way to tell which palette your terminal uses, so it
+makes some educated guesses:
+
+ i)   If vim thinks that there are 88 colors available, CSApprox will use the
+      xterm/urxvt-compatible 88 color palette (I don't know of any other
+      88 color palette in use anywhere).
+
+ ii)  If $TERM starts with "Eterm", CSApprox will approximate based on the
+      Eterm palette.
+
+ iii) If $TERM starts with "konsole", CSApprox will use the legacy Konsole
+      palette if either "kde4-config --kde-version" or "kde-config --version"
+      reports that the KDE version on the system is less than 4.2.0.
+      Otherwise, it will use the xterm palette.
+
+ iv)  If $TERM starts with "xterm" or "screen", then CSApprox looks for the
+      vim variables "g:CSApprox_eterm" and "g:CSApprox_konsole".
+      If g:CSApprox_eterm is true, CSApprox uses the Eterm palette.
+      If g:CSApprox_konsole is true, CSApprox uses the old konsole palette.
+      Otherwise, CSApprox uses the xterm palette.
+
+ v)   For all other $TERM values, CSApprox uses the xterm palette.
+
                                                    *csapprox-terminal-example*
-To turn on high color support without fixing $TERM, you can change t_Co in
-your .vimrc, and set either CSApprox_konsole or CSApprox_eterm if appropriate.
-One way would be to put something like this into your |vimrc|:
+To turn on high color support despite an incorrect $TERM, you can override
+t_Co (the vim name for the terminfo setting defining how many colors are
+available) in your .vimrc, and set either CSApprox_konsole or CSApprox_eterm
+if appropriate.  You could put something like this into your |vimrc|:
 >
     if (&term == 'xterm' || &term =~? '^screen') && hostname() == 'my-machine'
-        " On my machine, I use Konsole with 256 color support
+        " On my machine, I use an old Konsole with 256 color support
         set t_Co=256
         let g:CSApprox_konsole = 1
     endif
@@ -198,9 +219,9 @@ g:CSApprox_eterm                                            *g:CSApprox_eterm*
     palette would be used.  This also affects snapshotted schemes.
 
 g:CSApprox_konsole                                        *g:CSApprox_konsole*
-    If set to a non-zero number, CSApprox will use the Konsole palette when
-    'term' is set to "xterm" or begins with "screen".  Otherwise, the xterm
-    palette would be used.  This also affects snapshotted schemes.
+    If set to a non-zero number, CSApprox will use the old Konsole palette
+    when 'term' is set to "xterm" or begins with "screen".  Otherwise, the
+    xterm palette would be used.  This also affects snapshotted schemes.
 
 g:CSApprox_attr_map                                      *g:CSApprox_attr_map*
     Since some attributes (like 'guisp') can't be used in a terminal, and
@@ -501,10 +522,9 @@ iTerm (iTerm.app):
                                                             *csapprox-konsole*
 Konsole (konsole):
     256 color palette
-    Colors composed of: [ 0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF ]
-    Same greyscales as xterm
-    You should set the g:CSApprox_konsole variable unless $TERM begins with
-    'konsole', case insensitive
+    Colors used to be composed of: [ 0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF ]
+    As of KDE 2.2.0, colors match the xterm palette
+    Always used the same greyscales as xterm
 
                                                               *csapprox-eterm*
 eterm (Eterm):

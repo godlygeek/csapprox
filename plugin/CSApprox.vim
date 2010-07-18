@@ -783,6 +783,18 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '    command! -nargs=+ CSAHi exe "hi" <q-args>' ]
     let lines += [ 'endif' ]
     let lines += [ '' ]
+    let lines += [ 'function! s:old_kde()' ]
+    let lines += [ '  " Konsole only used its own palette up til KDE 4.2.0' ]
+    let lines += [ "  if executable('kde4-config') && system('kde4-config --kde-version') =~ '^4\.[10]\.'" ]
+    let lines += [ '    return 1' ]
+    let lines += [ "  elseif executable('kde-config') && system('kde-config --version') =~# 'KDE: 3\.'" ]
+    let lines += [ '    return 1' ]
+    let lines += [ '  else' ]
+    let lines += [ '    return 0' ]
+    let lines += [ '  endif' ]
+    let lines += [ 'endfunction' ]
+    let lines += [ '' ]
+
 
     let lines += [ 'if 0' ]
     for round in [ 'konsole', 'eterm', 'xterm', 'urxvt' ]
@@ -807,11 +819,17 @@ function! s:CSApproxSnapshot(file, overwrite)
       call s:FixupGuiInfo(highlights)
 
       if round == 'konsole' || round == 'eterm'
+        if round == 'konsole'
+          let term_matches_round = '(&term =~? "^konsole" && s:old_kde())'
+        else
+          let term_matches_round = '&term =~? "^' . round . '"'
+        endif
+
         let lines += [ 'elseif has("gui_running") || (&t_Co == ' . &t_Co
                    \ . ' && (&term ==# "xterm" || &term =~# "^screen")'
                    \ . ' && exists("g:CSApprox_' . round . '")'
                    \ . ' && g:CSApprox_' . round . ')'
-                   \ . ' || &term =~? "^' . round . '"' ]
+                   \ . ' || ' . term_matches_round ]
       else
         let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
       endif

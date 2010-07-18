@@ -25,7 +25,14 @@ function! csapprox#common#PaletteType()
       let type = 'xterm'
     endif
   elseif &term =~? '^konsole'
-    let type = 'konsole'
+    " Konsole only used its own palette up til KDE 4.2.0
+    if executable('kde4-config') && system('kde4-config --kde-version') =~ '^4\.[10]\.'
+      let type = 'konsole'
+    elseif executable('kde-config') && system('kde-config --version') =~# 'KDE: 3\.'
+      let type = 'konsole'
+    else
+      let type = 'xterm'
+    endif
   elseif &term =~? '^eterm'
     let type = 'eterm'
   else
