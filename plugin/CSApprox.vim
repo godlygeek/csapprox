@@ -632,8 +632,12 @@ function! s:CSApprox(...)
 
     call s:HandleHooks("pre", (exists("colors_name") ? colors_name : ""))
 
+    let old_bg = &bg
+
     " Set 'verbose' set to the maximum of &verbose and CSApprox_verbose_level
     exe max([&vbs, g:CSApprox_verbose_level]) 'verbose call s:CSApproxImpl()'
+
+    let &bg = old_bg
 
     call s:HandleHooks("post", (exists("colors_name") ? colors_name : ""))
   finally
@@ -894,9 +898,7 @@ command! -bang -nargs=1 -complete=file -bar CSApproxSnapshot
 " {>2} Manual updates
 command -bang -bar CSApprox call s:CSApprox(strlen("<bang>"))
 
-" {>1} Hooks
-
-" {>2} Autocmds
+" {>1} Autocmds
 " Set up an autogroup to hook us on the completion of any :colorscheme command
 augroup CSApprox
   au!
