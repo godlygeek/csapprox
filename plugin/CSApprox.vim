@@ -116,7 +116,7 @@ function! s:Highlights(modes)
 
     for where in a:modes
       let rv[i][where]  = {}
-      for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
+      for attr in s:PossibleAttributes()
         let rv[i][where][attr] = synIDattr(i, attr, where)
       endfor
 
@@ -284,6 +284,11 @@ endfunction
 
 " {>1} Derive and set cterm attributes
 
+" {>2} List of all possible attributes
+function! s:PossibleAttributes()
+  return [ "bold", "italic", "reverse", "underline", "undercurl" ]
+endfunction
+
 " {>2} Attribute overrides
 " Allow the user to override a specified attribute with another attribute.
 " For example, the default is to map 'italic' to 'underline' (since many
@@ -305,8 +310,7 @@ function! s:NormalizeAttrMap(map)
   let old = copy(a:map)
   let new = filter(a:map, '0')
 
-  let valid_attrs = [ 'bg', 'fg', 'sp', 'bold', 'italic',
-                    \ 'reverse', 'underline', 'undercurl' ]
+  let valid_attrs = [ 'bg', 'fg', 'sp' ] + s:PossibleAttributes()
 
   let colorattrs = [ 'fg', 'bg', 'sp' ]
 
@@ -374,7 +378,7 @@ function! s:FixupCtermInfo(highlights)
     endif
 
     " Find attributes to be set in the terminal
-    for attr in [ "bold", "italic", "reverse", "underline", "undercurl" ]
+    for attr in s:PossibleAttributes()
       let hl.cterm[attr] = ''
       if hl.gui[attr] == 1
         if s:attr_map(attr) != ''
@@ -482,7 +486,7 @@ function! s:SetCtermFromGui(hl)
   endfor
 
   " Finally, set the attributes
-  let attrs = [ 'bold', 'italic', 'reverse', 'underline', 'undercurl' ]
+  let attrs = s:PossibleAttributes()
   call filter(attrs, 'hl.cterm[v:val] == 1')
 
   if !empty(attrs)
@@ -848,7 +852,7 @@ function! s:CSApproxSnapshot(file, overwrite)
         let hl = highlights[hlnum]
         let line = '    CSAHi ' . hl.name
         for type in [ 'term', 'cterm', 'gui' ]
-          let attrs = [ 'bold', 'italic', 'reverse', 'underline', 'undercurl' ]
+          let attrs = s:PossibleAttributes()
           call filter(attrs, 'hl[type][v:val] == 1')
           let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
           if type != 'term'
