@@ -396,16 +396,18 @@ function! s:FixupCtermInfo(highlights)
       let hl.cterm[s:attr_map('sp')] = hl.gui['sp']
     endif
 
-    if hl.cterm['reverse'] && hl.cterm.bg == ''
-      let hl.cterm.bg = 'fg'
-    endif
+    if exists("g:CSApprox_fake_reverse") && g:CSApprox_fake_reverse
+      if hl.cterm['reverse'] && hl.cterm.bg == ''
+        let hl.cterm.bg = 'fg'
+      endif
 
-    if hl.cterm['reverse'] && hl.cterm.fg == ''
-      let hl.cterm.fg = 'bg'
-    endif
+      if hl.cterm['reverse'] && hl.cterm.fg == ''
+        let hl.cterm.fg = 'bg'
+      endif
 
-    if hl.cterm['reverse']
-      let hl.cterm.reverse = ''
+      if hl.cterm['reverse']
+        let hl.cterm.reverse = ''
+      endif
     endif
   endfor
 endfunction
@@ -480,7 +482,7 @@ function! s:SetCtermFromGui(hl)
   endfor
 
   " Finally, set the attributes
-  let attrs = [ 'bold', 'italic', 'underline', 'undercurl' ]
+  let attrs = [ 'bold', 'italic', 'reverse', 'underline', 'undercurl' ]
   call filter(attrs, 'hl.cterm[v:val] == 1')
 
   if !empty(attrs)
@@ -846,7 +848,7 @@ function! s:CSApproxSnapshot(file, overwrite)
         let hl = highlights[hlnum]
         let line = '    CSAHi ' . hl.name
         for type in [ 'term', 'cterm', 'gui' ]
-          let attrs = [ 'reverse', 'bold', 'italic', 'underline', 'undercurl' ]
+          let attrs = [ 'bold', 'italic', 'reverse', 'underline', 'undercurl' ]
           call filter(attrs, 'hl[type][v:val] == 1')
           let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
           if type != 'term'

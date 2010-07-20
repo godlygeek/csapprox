@@ -213,6 +213,20 @@ g:CSApprox_verbose_level                            *g:CSApprox_verbose_level*
     shown at verbosity level 1; some less important ones will be shown at
     higher verbosity levels.  Has no effect on snapshotted schemes.
 
+g:CSApprox_fake_reverse                              *g:CSApprox_fake_reverse*
+    In gvim, setting a highlight group like "Visual" (the color of your visual
+    mode selection) to do reverse video results in it reversing the colors of
+    each character cell under it.  Some terminals don't support this and will
+    instead always use the default background color on the default foreground
+    color when asked for reverse video.  If this variable is set to a non-zero
+    number, CSApprox will change any request for reverse video to the "Normal"
+    group's bg color on the "Normal" group's fg color, instead of asking the
+    terminal to do reverse video.  This provides a middle ground for terminals
+    that don't properly support reverse video - it's worse than having the
+    terminal properly reverse the colors of each character cell, but it's
+    better than the broken behavior of some terminal emulators.  This was the
+    default behavior before CSApprox 4.0.
+
 g:CSApprox_eterm                                            *g:CSApprox_eterm*
     If set to a non-zero number, CSApprox will use the Eterm palette when
     'term' is set to "xterm" or begins with "screen".  Otherwise, the xterm
