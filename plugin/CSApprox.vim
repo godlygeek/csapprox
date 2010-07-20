@@ -56,7 +56,8 @@
 " store them if it is not built with +gui.
 if exists('g:CSApprox_loaded')
   finish
-elseif ! has('gui')
+elseif !has('gui') && v:version < 703
+  " Vim versions less than < 7.3.0 need +gui.
   " Warn unless the user set g:CSApprox_verbose_level to zero.
   if get(g:, 'CSApprox_verbose_level', 1)
     echomsg "CSApprox needs gui support - not loading."
