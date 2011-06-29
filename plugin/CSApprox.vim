@@ -615,11 +615,11 @@ function! s:CSApprox(...)
       let g:CSApprox_attr_map = { 'italic' : 'underline', 'sp' : 'fg' }
     endif
 
-    " colors_name must be unset and reset, or vim will helpfully reload the
+    " g:colors_name must be unset and reset, or vim will helpfully reload the
     " colorscheme when we set the background for the Normal group.
     " See the help entries ':hi-normal-cterm' and 'g:colors_name'
     if exists("g:colors_name")
-      let colors_name = g:colors_name
+      let l:colors_name = g:colors_name
       unlet g:colors_name
     endif
 
@@ -627,7 +627,7 @@ function! s:CSApprox(...)
     " doesn't recognize, lest vim helpfully switch all colors back to the
     " default whenever the Normal group is changed (in syncolor.vim)...
     if exists("g:syntax_cmd")
-      let syntax_cmd = g:syntax_cmd
+      let l:syntax_cmd = g:syntax_cmd
     endif
     let g:syntax_cmd = "PLEASE DON'T CHANGE ANY COLORS!!!"
 
@@ -637,7 +637,7 @@ function! s:CSApprox(...)
       let g:CSApprox_verbose_level = 1
     endif
 
-    call s:HandleHooks("pre", (exists("colors_name") ? colors_name : ""))
+    call s:HandleHooks("pre", (exists("l:colors_name") ? l:colors_name : ""))
 
     let old_bg = &bg
 
@@ -646,15 +646,15 @@ function! s:CSApprox(...)
 
     let &bg = old_bg
 
-    call s:HandleHooks("post", (exists("colors_name") ? colors_name : ""))
+    call s:HandleHooks("post", (exists("l:colors_name") ? l:colors_name : ""))
   finally
-    if exists("colors_name")
-      let g:colors_name = colors_name
+    if exists("l:colors_name")
+      let g:colors_name = l:colors_name
     endif
 
     unlet g:syntax_cmd
-    if exists("syntax_cmd")
-      let g:syntax_cmd = syntax_cmd
+    if exists("l:syntax_cmd")
+      let g:syntax_cmd = l:syntax_cmd
     endif
 
     let &lz   = savelz
@@ -766,13 +766,13 @@ function! s:CSApproxSnapshot(file, overwrite)
 
   " Needed just like in CSApprox()
   if exists("g:colors_name")
-    let colors_name = g:colors_name
+    let l:colors_name = g:colors_name
     unlet g:colors_name
   endif
 
   " Needed just like in CSApprox()
   if exists("g:syntax_cmd")
-    let syntax_cmd = g:syntax_cmd
+    let l:syntax_cmd = g:syntax_cmd
   endif
   let g:syntax_cmd = "PLEASE DON'T CHANGE ANY COLORS!!!"
 
@@ -883,13 +883,13 @@ function! s:CSApproxSnapshot(file, overwrite)
       let g:CSApprox_eterm = save_CSApprox_eterm
     endif
 
-    if exists("colors_name")
-      let g:colors_name = colors_name
+    if exists("l:colors_name")
+      let g:colors_name = l:colors_name
     endif
 
     unlet g:syntax_cmd
-    if exists("syntax_cmd")
-      let g:syntax_cmd = syntax_cmd
+    if exists("l:syntax_cmd")
+      let g:syntax_cmd = l:syntax_cmd
     endif
 
     call s:CSApprox()
