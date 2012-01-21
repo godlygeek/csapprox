@@ -363,14 +363,11 @@ endfunction
 " {>2} Map gui settings to cterm settings
 " Given information about a highlight group, replace the cterm settings with
 " the mapped gui settings, applying any attribute overrides along the way.  In
-" particular, this gives special treatment to the 'reverse' attribute and the
-" 'guisp' attribute.  In particular, if the 'reverse' attribute is set for
-" gvim, we unset it for the terminal and instead set ctermfg to match guibg
-" and vice versa, since terminals can consider a 'reverse' flag to mean using
-" default-bg-on-default-fg instead of current-bg-on-current-fg.  We also
-" ensure that the 'sp' attribute is never set for cterm, since no terminal can
-" handle that particular highlight.  If the user wants to display the guisp
-" color, he should map it to either 'fg' or 'bg' using g:CSApprox_attr_map.
+" particular, this gives special treatment to the 'guisp' attribute.  In
+" particular, we ensure that the 'sp' attribute is never set for cterm, since
+" no terminal can handle that particular highlight.  If the user wants to
+" display the guisp color, he should map it to either 'fg' or 'bg' using
+" g:CSApprox_attr_map.
 function! s:FixupCtermInfo(highlights)
   for hl in values(a:highlights)
 
@@ -389,12 +386,7 @@ function! s:FixupCtermInfo(highlights)
     endfor
 
     for color in [ "bg", "fg" ]
-      let eff_color = color
-      if hl.cterm['reverse']
-        let eff_color = (color == 'bg' ? 'fg' : 'bg')
-      endif
-
-      let hl.cterm[color] = get(hl.gui, s:attr_map(eff_color), '')
+      let hl.cterm[color] = get(hl.gui, s:attr_map(color), '')
     endfor
 
     if hl.gui['sp'] != '' && s:attr_map('sp') != ''
