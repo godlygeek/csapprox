@@ -849,8 +849,8 @@ function! s:CSApproxSnapshot(file, overwrite)
           call filter(attrs, 'hl[type][v:val] == 1')
           let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
           if type != 'term'
-            let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'bg')
-            let line .= ' ' . type . 'fg=' . (len(hl[type].fg) ? hl[type].fg : 'fg')
+            let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'NONE')
+            let line .= ' ' . type . 'fg=' . (len(hl[type].fg) ? hl[type].fg : 'NONE')
             if type == 'gui' && hl.gui.sp !~ '^\s*$'
               let line .= ' ' . type . 'sp=' . hl[type].sp
             endif
