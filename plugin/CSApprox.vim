@@ -287,7 +287,7 @@ endfunction
 
 " {>2} List of all possible attributes
 function! s:PossibleAttributes()
-  return [ "bold", "italic", "reverse", "underline", "undercurl" ]
+  return [ "bold", "italic", "reverse", "inverse", "standout", "underline", "undercurl" ]
 endfunction
 
 " {>2} Attribute overrides
@@ -393,18 +393,19 @@ function! s:FixupCtermInfo(highlights)
       let hl.cterm[s:attr_map('sp')] = hl.gui['sp']
     endif
 
-    if exists("g:CSApprox_fake_reverse") && g:CSApprox_fake_reverse
-      if hl.cterm['reverse'] && hl.cterm.bg == ''
-        let hl.cterm.bg = 'fg'
+    if exists("g:CSApprox_fake_reverse") && g:CSApprox_fake_reverse && hl.cterm['reverse']
+      "manually swap the colors
+      let hl.cterm.reverse = ''
+
+      if hl.cterm.bg == ''
+        let hl.cterm.bg = 'bg'
       endif
 
-      if hl.cterm['reverse'] && hl.cterm.fg == ''
-        let hl.cterm.fg = 'bg'
+      if hl.cterm.fg == ''
+        let hl.cterm.fg = 'fg'
       endif
 
-      if hl.cterm['reverse']
-        let hl.cterm.reverse = ''
-      endif
+      let [hl.cterm.fg, hl.cterm.bg] = [hl.cterm.bg, hl.cterm.fg]
     endif
   endfor
 endfunction
@@ -773,18 +774,20 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '" This scheme was created by CSApproxSnapshot' ]
     let lines += [ '" on ' . strftime("%a, %d %b %Y") ]
     let lines += [ '' ]
-    let lines += [ 'hi clear' ]
-    let lines += [ 'if exists("syntax_on")' ]
-    let lines += [ '    syntax reset' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'syntax on' ]
+    let lines += [ 'let syntax_cmd="skip"' ]
+    let lines += [ 'highlight clear' ]
     let lines += [ '' ]
-    let lines += [ 'if v:version < 700' ]
-    let lines += [ '    let g:colors_name = expand("<sfile>:t:r")' ]
-    let lines += [ '    command! -nargs=+ CSAHi exe "hi" substitute(substitute(<q-args>, "undercurl", "underline", "g"), "guisp\\S\\+", "", "g")' ]
-    let lines += [ 'else' ]
-    let lines += [ '    let g:colors_name = expand("<sfile>:t:r")' ]
-    let lines += [ '    command! -nargs=+ CSAHi exe "hi" <q-args>' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'let g:colors_name = expand("<sfile>:t:r")' ]
+    let lines += [ 'function! s:CSAHi(group, ...)' ]
+    let lines += [ '    exec "hi clear" a:group' ]
+    let lines += [ '    let hi = join(a:000, " ")' ]
+    let lines += [ '    if v:version < 700' ]
+    let lines += [ '        let hi = substitute(substitute(hi, "undercurl", "underline", "g"), "guisp\\S\\+", "", "g")' ]
+    let lines += [ '    endif' ]
+    let lines += [ '    exe "hi" a:group hi' ]
+    let lines += [ 'endfunction' ]
+    let lines += [ 'command! -nargs=+ CSAHi call s:CSAHi(<f-args>)' ]
     let lines += [ '' ]
     let lines += [ 'function! s:old_kde()' ]
     let lines += [ '  " Konsole only used its own palette up til KDE 4.2.0' ]
@@ -843,27 +846,35 @@ function! s:CSApproxSnapshot(file, overwrite)
 
       for hlnum in hinums
         let hl = highlights[hlnum]
-        let line = '    CSAHi ' . hl.name
+        let line = ''
         for type in [ 'term', 'cterm', 'gui' ]
           let attrs = s:PossibleAttributes()
           call filter(attrs, 'hl[type][v:val] == 1')
-          let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
+          if !empty(attrs)
+            let line .= ' ' . type . '=' . join(attrs, ',')
+          endif
           if type != 'term'
-            let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'NONE')
-            let line .= ' ' . type . 'fg=' . (len(hl[type].fg) ? hl[type].fg : 'NONE')
+            if hl[type].bg != ''
+              let line .= ' ' . type . 'bg=' . hl[type].bg
+            endif
+            if hl[type].fg != ''
+              let line .= ' ' . type . 'fg=' . hl[type].fg
+            endif
             if type == 'gui' && hl.gui.sp !~ '^\s*$'
               let line .= ' ' . type . 'sp=' . hl[type].sp
             endif
           endif
         endfor
-        let lines += [ line ]
+        if line != ''
+          let lines += [ '    CSAHi ' . hl.name . line ]
+        endif
       endfor
     endfor
     let lines += [ 'endif' ]
     let lines += [ '' ]
-    let lines += [ 'if 1' ]
-    let lines += [ '    delcommand CSAHi' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'delcommand CSAHi' ]
+    let lines += [ 'delfunction s:CSAHi' ]
+    let lines += [ 'let syntax_cmd="on"' ]
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
