@@ -89,55 +89,81 @@ function! s:NeedRedirFallback()
   return g:CSApprox_redirfallback
 endfunction
 
-" {>2} Collect and store the highlights
-" Get a dictionary containing information for every highlight group not merely
-" linked to another group.  Return value is a dictionary, with highlight group
-" numbers for keys and values that are dictionaries with four keys each,
-" 'name', 'term', 'cterm', and 'gui'.  'name' holds the group name, and each
-" of the others holds highlight information for that particular mode.
+" {>2} Collect and store the highlights Get a dictionary containing
+" information for every highlight group.  Return value is a dictionary mapping
+" highlight group names to dictionaries with five keys each:
+" [name|id|links|term|cterm|gui].
+"   "name" is the highlight-group's name. 
+"   "id" is the numeric id, suitable for passing to the synID* functions.
+"   "links" holds the list of group names which are to be linked to this one.
+"   "term", "cterm" and "gui" contain the highlight attributes as dictionaries.
+"     Their keys are [fg|bg|extra|sp].
+"     "extra" is a list of the non-color highlight information, such as 'bold'.
+"     "sp" will be unset except under 'gui'
 function! s:Highlights(modes)
-  let rv = {}
+  let rv = {} "return value
+  let id2name = {}
+  let name2link = {}
 
-  let i = 0
+  let id = 0
   while 1
-    let i += 1
+    let id += 1
 
-    " Only interested in groups that exist and aren't linked
-    if synIDtrans(i) == 0
+    " Only interested in groups that exist
+    if synIDtrans(id) == 0
       break
     endif
 
-    " Handle vim bug allowing groups with name == "" to be created
-    if synIDtrans(i) != i || len(synIDattr(i, "name")) == 0
+    " Handle vim bug allowing groups to be created without a name
+    if synIDattr(id, "name") == ""
       continue
     endif
 
-    let rv[i] = {}
-    let rv[i].name = synIDattr(i, "name")
+    " Handle linked highlight groups
+    let name = synIDattr(id, "name")
+    if synIDtrans(id) != id
+      "save it for later. links can be out-of-order. see zellner.
+      let name2link[name] = synIDtrans(id)
+      continue
+    endif
 
-    for where in a:modes
-      let rv[i][where]  = {}
-      for attr in s:PossibleAttributes()
-        let rv[i][where][attr] = synIDattr(i, attr, where)
-      endfor
+    let highlight = {'name':name, 'id':id, 'links':[]}
+    for mode in a:modes
+      let highlight[mode] = {}
+
+      let attrs = s:PossibleAttributes()
+      call filter(attrs, 'synIDattr(id, v:val, mode) == 1')
+      let highlight[mode].extra = attrs
 
       for attr in [ "fg", "bg" ]
-        let rv[i][where][attr] = synIDattr(i, attr.'#', where)
-      endfor
-
-      if where == "gui"
-        let rv[i][where]["sp"] = s:SynGuiSp(i, rv[i].name)
-      else
-        let rv[i][where]["sp"] = -1
-      endif
-
-      for attr in [ "fg", "bg", "sp" ]
-        if rv[i][where][attr] == -1
-          let rv[i][where][attr] = ''
+        let color = synIDattr(id, attr.'#', mode)
+        if color == -1
+          let highlight[mode][attr] = ''
+        else
+          let highlight[mode][attr] = color
         endif
       endfor
+
+      if mode == "gui"
+        let color = s:SynGuiSp(id, name)
+        if color == -1
+          let highlight[mode]["sp"] = ''
+        else
+          let highlight[mode]["sp"] = color
+        endif
+      endif
+
+      " Link everything up!
+      let rv[name] = highlight
+      let id2name[id] = name
     endfor
+
   endwhile
+
+  "record all the links we've seen
+  for [name, link] in items(name2link)
+    call add(rv[id2name[link]].links, name)
+  endfor
 
   return rv
 endfunction
@@ -156,7 +182,7 @@ endfunction
 " {>3} Implementation for retrieving guisp with redir hack
 function! s:SynGuiSpRedir(name)
   redir => temp
-  exe 'sil hi ' . a:name
+  exe 'sil hi' a:name
   redir END
   let temp = matchstr(temp, 'guisp=\zs.*')
   if len(temp) == 0 || temp[0] =~ '\s'
@@ -287,7 +313,9 @@ endfunction
 
 " {>2} List of all possible attributes
 function! s:PossibleAttributes()
-  return [ "bold", "italic", "reverse", "underline", "undercurl" ]
+  " inverse is exactly equivalent to reverse: they'll both be set or unset
+  " the rest of these are distinct
+  return [ "bold", "italic", "reverse", "standout", "underline", "undercurl" ]
 endfunction
 
 " {>2} Attribute overrides
@@ -302,9 +330,7 @@ endfunction
 " can look up, to string values, representing the attribute mapped to or an
 " empty string to disable the given attribute entirely.
 function! s:attr_map(attr)
-  let rv = get(g:CSApprox_attr_map, a:attr, a:attr)
-
-  return rv
+  return get(g:CSApprox_attr_map, a:attr, a:attr)
 endfunction
 
 function! s:NormalizeAttrMap(map)
@@ -349,71 +375,59 @@ endfunction
 
 " {>2} Normalize the GUI settings of a highlight group
 " If the Normal group is cleared, set it to gvim's default, black on white
-" Though this would be a really weird thing for a scheme to do... *shrug*
+" Although this is a really weird thing for a scheme to do, the 'default'
+" colorscheme does this.
 function! s:FixupGuiInfo(highlights)
-  if a:highlights[s:hlid_normal].gui.bg == ''
-    let a:highlights[s:hlid_normal].gui.bg = 'white'
+  if a:highlights['Normal'].gui.bg == ''
+    let a:highlights['Normal'].gui.bg = 'white'
   endif
 
-  if a:highlights[s:hlid_normal].gui.fg == ''
-    let a:highlights[s:hlid_normal].gui.fg = 'black'
+  if a:highlights['Normal'].gui.fg == ''
+    let a:highlights['Normal'].gui.fg = 'black'
   endif
 endfunction
 
 " {>2} Map gui settings to cterm settings
 " Given information about a highlight group, replace the cterm settings with
 " the mapped gui settings, applying any attribute overrides along the way.  In
-" particular, this gives special treatment to the 'reverse' attribute and the
-" 'guisp' attribute.  In particular, if the 'reverse' attribute is set for
-" gvim, we unset it for the terminal and instead set ctermfg to match guibg
-" and vice versa, since terminals can consider a 'reverse' flag to mean using
-" default-bg-on-default-fg instead of current-bg-on-current-fg.  We also
-" ensure that the 'sp' attribute is never set for cterm, since no terminal can
-" handle that particular highlight.  If the user wants to display the guisp
-" color, he should map it to either 'fg' or 'bg' using g:CSApprox_attr_map.
+" particular, this gives special treatment to the 'guisp' attribute.  In
+" particular, we ensure that the 'sp' attribute is never set for cterm, since
+" no terminal can handle that particular highlight.  If the user wants to
+" display the guisp color, he should map it to either 'fg' or 'bg' using
+" g:CSApprox_attr_map.
 function! s:FixupCtermInfo(highlights)
   for hl in values(a:highlights)
-
-    if !has_key(hl, 'cterm')
-      let hl["cterm"] = {}
-    endif
+    let hl.cterm = {}
 
     " Find attributes to be set in the terminal
-    for attr in s:PossibleAttributes()
-      let hl.cterm[attr] = ''
-      if hl.gui[attr] == 1
-        if s:attr_map(attr) != ''
-          let hl.cterm[ s:attr_map(attr) ] = 1
-        endif
-      endif
+    let hl.cterm.extra = copy(hl.gui.extra)
+    call map(hl.cterm.extra, 's:attr_map(v:val)')
+
+    for mode in [ "bg", "fg" ]
+      let hl.cterm[s:attr_map(mode)] = hl.gui[mode]
     endfor
 
-    for color in [ "bg", "fg" ]
-      let eff_color = color
-      if hl.cterm['reverse']
-        let eff_color = (color == 'bg' ? 'fg' : 'bg')
-      endif
-
-      let hl.cterm[color] = get(hl.gui, s:attr_map(eff_color), '')
-    endfor
-
-    if hl.gui['sp'] != '' && s:attr_map('sp') != ''
-      let hl.cterm[s:attr_map('sp')] = hl.gui['sp']
+    if strlen(hl.gui.sp) && s:attr_map('sp') != 'sp'
+      let hl.cterm[s:attr_map('sp')] = hl.gui.sp
     endif
 
-    if exists("g:CSApprox_fake_reverse") && g:CSApprox_fake_reverse
-      if hl.cterm['reverse'] && hl.cterm.bg == ''
-        let hl.cterm.bg = 'fg'
+    if exists("g:CSApprox_fake_reverse") 
+        \&& g:CSApprox_fake_reverse 
+        \&& index(hl.cterm.extra, 'reverse') != -1
+      "manually swap the colors
+      call filter(hl.cterm.extra, 'v:val != "reverse"')
+
+      if hl.cterm.bg == ''
+        let hl.cterm.bg = 'bg'
       endif
 
-      if hl.cterm['reverse'] && hl.cterm.fg == ''
-        let hl.cterm.fg = 'bg'
+      if hl.cterm.fg == ''
+        let hl.cterm.fg = 'fg'
       endif
 
-      if hl.cterm['reverse']
-        let hl.cterm.reverse = ''
-      endif
+      let [hl.cterm.fg, hl.cterm.bg] = [hl.cterm.bg, hl.cterm.fg]
     endif
+
   endfor
 endfunction
 
@@ -438,10 +452,10 @@ function! s:SetCtermFromGui(hl)
   endif
 
   " Clear existing highlights
-  exe 'hi ' . hl.name . ' cterm=NONE ctermbg=NONE ctermfg=NONE'
+  exe 'hi' hl.name 'cterm=NONE ctermbg=NONE ctermfg=NONE'
 
-  for which in [ 'bg', 'fg' ]
-    let val = hl.cterm[which]
+  for mode in [ 'bg', 'fg' ]
+    let val = hl.cterm[mode]
 
     " Skip unset colors
     if val == -1 || val == ""
@@ -450,7 +464,7 @@ function! s:SetCtermFromGui(hl)
 
     " Try translating anything but 'fg', 'bg', #rrggbb, and rrggbb from an
     " rgb.txt color to a #rrggbb color
-    if val !~? '^[fb]g$' && val !~ '^#\=\x\{6}$'
+    if val !~? '^[fb]g$' && val !~ '^#\?\x\{6}$'
       try
         " First see if it is in our preset-by-vim rgb list
         let val = s:rgb_presets[tolower(val)]
@@ -472,34 +486,35 @@ function! s:SetCtermFromGui(hl)
     endif
 
     if val =~? '^[fb]g$'
-      exe 'hi ' . hl.name . ' cterm' . which . '=' . val
-      let hl.cterm[which] = val
-    elseif val =~ '^#\=\x\{6}$'
+      exe 'hi' hl.name 'cterm' . mode . '=' . val
+      let hl.cterm[mode] = val
+    elseif val =~ '^#\?\x\{6}$'
       let val = substitute(val, '^#', '', '')
       let r = str2nr(val[0:1], 16)
       let g = str2nr(val[2:3], 16)
       let b = str2nr(val[4:5], 16)
-      let hl.cterm[which] = g:CSApprox_approximator_function(r, g, b)
-      exe 'hi ' . hl.name . ' cterm' . which . '=' . hl.cterm[which]
+      let hl.cterm[mode] = g:CSApprox_approximator_function(r, g, b)
+      exe 'hi' hl.name 'cterm' . mode . '=' . hl.cterm[mode]
+    elseif val == ''
+      " do nothing
     else
       throw "Internal error handling color: " . val
     endif
   endfor
 
-  " Finally, set the attributes
-  let attrs = s:PossibleAttributes()
-  call filter(attrs, 'hl.cterm[v:val] == 1')
+  " Link the links
+  for link in hl.links
+    exe 'hi! link' link hl.name
+  endfor
 
-  if !empty(attrs)
-    exe 'hi ' . hl.name . ' cterm=' . join(attrs, ',')
+  " Finally, set the attributes
+  if !empty(hl.cterm.extra)
+    exe 'hi' hl.name 'cterm=' . join(hl.cterm.extra, ',')
   endif
 endfunction
 
 
 " {>1} Top-level control
-
-" Cache the highlight ID of the normal group; it's used often and won't change
-let s:hlid_normal = hlID('Normal')
 
 " {>2} Builtin cterm color names above 15
 " Vim defines some color name to high color mappings internally (see
@@ -687,7 +702,7 @@ function! s:CSApproxImpl()
   " Get the current highlight colors
   let highlights = s:Highlights(["gui"])
 
-  let hinums = keys(highlights)
+  let names = keys(highlights)
 
   " Make sure that the script is not already 256 color by checking to make
   " sure that no groups are set to a value above 256, unless the color they're
@@ -696,14 +711,14 @@ function! s:CSApproxImpl()
   "
   " XXX: s:inhibit_hicolor_test allows this test to be skipped for snapshots
   if !exists("s:inhibit_hicolor_test") || !s:inhibit_hicolor_test
-    for hlid in hinums
+    for name in names
       for type in [ 'bg', 'fg' ]
-        let color = synIDattr(hlid, type, 'cterm')
+        let color = synIDattr(highlights[name].id, type, 'cterm')
 
         if color > 15 && index(s:presets_{&t_Co}, str2nr(color)) < 0
           " The value is set above 15, and wasn't set by vim.
           if &verbose >= 2
-            echomsg 'CSApprox: Exiting - high' type 'color found for' highlights[hlid].name
+            echomsg 'CSApprox: Exiting - high' type 'color found for' name
           endif
           return
         endif
@@ -715,11 +730,11 @@ function! s:CSApproxImpl()
   call s:FixupCtermInfo(highlights)
 
   " We need to set the Normal group first so 'bg' and 'fg' work as colors
-  call insert(hinums, remove(hinums, index(hinums, string(s:hlid_normal))))
+  call insert(names, remove(names, index(names, 'Normal')))
 
   " then set each color's cterm attributes to match gui
-  for hlid in hinums
-    call s:SetCtermFromGui(highlights[hlid])
+  for name in names
+    call s:SetCtermFromGui(highlights[name])
   endfor
 endfunction
 
@@ -764,6 +779,7 @@ function! s:CSApproxSnapshot(file, overwrite)
     let save_CSApprox_eterm = g:CSApprox_eterm
   endif
 
+  " TODO: it seems like we don't really need this, since we re-use CSApprox
   " Needed just like in CSApprox()
   if exists("g:colors_name")
     let colors_name = g:colors_name
@@ -781,18 +797,26 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '" This scheme was created by CSApproxSnapshot' ]
     let lines += [ '" on ' . strftime("%a, %d %b %Y") ]
     let lines += [ '' ]
-    let lines += [ 'hi clear' ]
-    let lines += [ 'if exists("syntax_on")' ]
-    let lines += [ '    syntax reset' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'syntax on' ]
+    let lines += [ 'let syntax_cmd="skip"' ]
+    let lines += [ 'highlight clear' ]
     let lines += [ '' ]
-    let lines += [ 'if v:version < 700' ]
-    let lines += [ '    let g:colors_name = expand("<sfile>:t:r")' ]
-    let lines += [ '    command! -nargs=+ CSAHi exe "hi" substitute(substitute(<q-args>, "undercurl", "underline", "g"), "guisp\\S\\+", "", "g")' ]
-    let lines += [ 'else' ]
-    let lines += [ '    let g:colors_name = expand("<sfile>:t:r")' ]
-    let lines += [ '    command! -nargs=+ CSAHi exe "hi" <q-args>' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'let g:colors_name = expand("<sfile>:t:r")' ]
+    let lines += [ 'function! s:CSAhi(group, ...)' ]
+    let lines += [ '    exe "hi clear" a:group' ]
+    let lines += [ '    let hi = join(a:000, " ")' ]
+    let lines += [ '    if v:version < 700' ]
+    let lines += [ '        let hi = substitute(substitute(hi, "undercurl", "underline", "g"), "guisp=\\S\\+", "", "g")' ]
+    let lines += [ '    endif' ]
+    let lines += [ '    exe "hi" a:group hi' ]
+    let lines += [ 'endfunction' ]
+    let lines += [ 'command! -nargs=+ CSAhi call s:CSAhi(<f-args>)' ]
+    let lines += [ '' ]
+    let lines += [ 'function! s:CSAlink(from, to)' ]
+    let lines += [ '    exe "hi clear" a:from' ]
+    let lines += [ '    exe "hi! link" a:from a:to' ]
+    let lines += [ 'endfunction' ]
+    let lines += [ 'command! -nargs=+ CSAlink call s:CSAlink(<f-args>)' ]
     let lines += [ '' ]
     let lines += [ 'function! s:old_kde()' ]
     let lines += [ '  " Konsole only used its own palette up til KDE 4.2.0' ]
@@ -807,8 +831,8 @@ function! s:CSApproxSnapshot(file, overwrite)
     let lines += [ '' ]
 
 
-    let lines += [ 'if 0' ]
-    for round in [ 'konsole', 'eterm', 'xterm', 'urxvt' ]
+    let xterm_colors = {}
+    for round in [ 'xterm', 'konsole', 'eterm', 'urxvt' ]
       sil! unlet g:CSApprox_eterm
       sil! unlet g:CSApprox_konsole
 
@@ -824,54 +848,84 @@ function! s:CSApproxSnapshot(file, overwrite)
         set t_Co=256
       endif
 
+      if round == 'xterm'
+        let lines += [ 'if has("gui_running") || &t_Co == ' . &t_Co ]
+      elseif round == 'konsole'
+        let lines += [ '' ]
+        let lines += [ '    if &term =~# "^xterm" || &term =~# "^screen"' ]
+        let lines += [ '        " that''s an ambiguous terminal setting' ]
+        let lines += [ '        if (exists("g:CSApprox_konsole") && g:CSApprox_konsole) || (&term =~? "^konsole" && s:old_kde())' ]
+      elseif round == 'eterm'
+        let lines += [ '        elseif (exists("g:CSApprox_eterm") && g:CSApprox_eterm) || &term =~? "^eterm"']
+      elseif round == 'urxvt'
+        let lines += [ '        endif' ]
+        let lines += [ '    endif' ]
+        let lines += [ '' ]
+        let lines += [ 'elseif &t_Co == ' . &t_Co ]
+      endif
+
       call s:CSApprox()
 
       let highlights = s:Highlights(["term", "cterm", "gui"])
       call s:FixupGuiInfo(highlights)
 
-      if round == 'konsole' || round == 'eterm'
-        if round == 'konsole'
-          let term_matches_round = '(&term =~? "^konsole" && s:old_kde())'
-        else
-          let term_matches_round = '&term =~? "^' . round . '"'
-        endif
+      " Sort the color groups, for readability
+      let names = sort(keys(highlights))
+      " We need to set the Normal group first so 'bg' and 'fg' work as colors
+      call insert(names, remove(names, index(names, 'Normal')))
 
-        let lines += [ 'elseif has("gui_running") || (&t_Co == ' . &t_Co
-                   \ . ' && (&term ==# "xterm" || &term =~# "^screen")'
-                   \ . ' && exists("g:CSApprox_' . round . '")'
-                   \ . ' && g:CSApprox_' . round . ')'
-                   \ . ' || ' . term_matches_round ]
-      else
-        let lines += [ 'elseif has("gui_running") || &t_Co == ' . &t_Co ]
-      endif
-
-      let hinums = keys(highlights)
-
-      call insert(hinums, remove(hinums, index(hinums, string(s:hlid_normal))))
-
-      for hlnum in hinums
-        let hl = highlights[hlnum]
-        let line = '    CSAHi ' . hl.name
-        for type in [ 'term', 'cterm', 'gui' ]
-          let attrs = s:PossibleAttributes()
-          call filter(attrs, 'hl[type][v:val] == 1')
-          let line .= ' ' . type . '=' . (empty(attrs) ? 'NONE' : join(attrs, ','))
-          if type != 'term'
-            let line .= ' ' . type . 'bg=' . (len(hl[type].bg) ? hl[type].bg : 'bg')
-            let line .= ' ' . type . 'fg=' . (len(hl[type].fg) ? hl[type].fg : 'fg')
-            if type == 'gui' && hl.gui.sp !~ '^\s*$'
-              let line .= ' ' . type . 'sp=' . hl[type].sp
+      for name in names
+        let hl = highlights[name]
+        let line = ''
+        for mode in [ 'term', 'cterm', 'gui' ]
+          if !empty(hl[mode].extra)
+            let line .= ' ' . mode . '=' . join(hl[mode].extra, ',')
+          endif
+          if mode != 'term'
+            if hl[mode].bg != ''
+              let line .= ' ' . mode . 'bg=' . hl[mode].bg
+            endif
+            if hl[mode].fg != ''
+              let line .= ' ' . mode . 'fg=' . hl[mode].fg
+            endif
+            if mode == 'gui' && hl.gui.sp !~ '^\s*$'
+              let line .= ' ' . mode . 'sp=' . hl[mode].sp
             endif
           endif
         endfor
-        let lines += [ line ]
+        if line == ''
+          continue
+        else
+          let line = '    CSAhi ' . name . line
+        endif
+        if round == 'xterm'
+          " Record what we set in the xterm round
+          let xterm_colors[line] = 1
+        endif
+        if round == 'xterm' || round == 'urxvt'
+          let lines += [ line ]
+          " Write out links for accuracy, in sorted order for readability
+          " Some color schemes set links (see zenburn, ir_black)
+          for link in sort(hl.links)
+            let lines += [ '      CSAlink ' . link . ' ' . hl.name ]
+          endfor
+        elseif round == 'konsole' || round == 'eterm'
+          " only need to output this if it wasn't set in the xterm round
+          if !has_key(xterm_colors, line)
+            let lines += [ '    ' . line ]
+          endif
+        else
+          throw "Internal error snapshotting: " . round
+        endif
       endfor
     endfor
     let lines += [ 'endif' ]
     let lines += [ '' ]
-    let lines += [ 'if 1' ]
-    let lines += [ '    delcommand CSAHi' ]
-    let lines += [ 'endif' ]
+    let lines += [ 'delcommand CSAlink' ]
+    let lines += [ 'delfunction s:CSAlink' ]
+    let lines += [ 'delcommand CSAhi' ]
+    let lines += [ 'delfunction s:CSAhi' ]
+    let lines += [ 'let syntax_cmd="on"' ]
     call writefile(lines, file)
   finally
     let &t_Co = save_t_Co
