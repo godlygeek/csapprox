@@ -8,10 +8,10 @@
                 \___//___//_/ |_|/ .__// .__//_/   \___//_\_\  ~
                                 /_/   /_/                      ~
                                                   For Vim version 7.0 or newer
-                                                      Last changed 01 Apr 2009
+                                                      Last changed 14 Sep 2012
 
                                By Matt Wozniski
-                                mjw@drexel.edu
+                             godlygeek@gmail.com
 
                               Reference Manual~
 
@@ -74,7 +74,7 @@ NOTE: The generated colorscheme will only work in 88- and 256-color terminals,
       standard for what those 16 colors look like other than 'orange-ish',
       'red-ish', etc.
 
-NOTE: Although :CSApproxSnapshot can be used in both GVim and terminal Vim,
+NOTE: Although |:CSApproxSnapshot| can be used in both GVim and terminal Vim,
       the resulting colors might be slightly off when run from terminal Vim.
       I can find no way around this; Vim internally sets different colors when
       running in a terminal than running in the GUI, and there's no way for
@@ -97,7 +97,10 @@ group from the corresponding gui color.  Syntax:
 
 For CSApprox to work, there are 2 major requirements that must be met.
 
-a) GUI support                          *csapprox-gui-support* *csapprox-+gui*
+a) GUI support (or vim >= 7.3)          *csapprox-gui-support* *csapprox-+gui*
+
+NOTE This section only applies to vim versions before 7.3.000 - a modern vim
+does not need GUI support in order for CSApprox to function.
 
 If CSApprox is being used to adjust a scheme's colors transparently, then the
 terminal "vim" binary that is being run must be built with GUI support (see
@@ -105,6 +108,7 @@ terminal "vim" binary that is being run must be built with GUI support (see
 used to create a terminal colorscheme for high color terminals, then the
 "vim" binary being used to create the scheme must be built with +gui, but the
 scheme can be used in terminal "vim" binaries that weren't built with +gui.
+
 NOTE that creating snapshots with GVim will work better than making them with
 Vim, and (obviously) all "gvim" binaries are built with +gui.
 
@@ -397,7 +401,7 @@ gives a very close approximation to the GVim colors without requiring any
 changes to the colorscheme, or any user interaction.  It only requires that
 the plugin be installed on the machine where Vim is being run, and that the
 user's environment meets the needs specified at |csapprox-requirements|.  In
-the event that this doesn't work, a second option - using :CSApproxSnapshot
+the event that this doesn't work, a second option - using |:CSApproxSnapshot|
 to create a new, 88-/256-color capable colorscheme - is available.
 
 Ideally, the aim is for CSApprox to be completely transparent to the user.
@@ -425,15 +429,16 @@ improvements or complaints.
 ==============================================================================
 5. Known Bugs and Limitations                           *csapprox-limitations*
 
-GUI support is required for transparently adapting schemes.
+GUI support or vim >= 7.3 is required for transparently adapting schemes.
 
   There is nothing I can do about this given my chosen design.  CSApprox works
   by being notified every time a colorscheme sets some GUI colors, then
   approximating those colors to similar terminal colors.  Unfortunately, when
-  Vim is not built with GUI support, it doesn't bother to store the GUI
+  Vim < 7.3 is not built with GUI support, it doesn't bother to store the GUI
   colors, so querying for them fails.  This leaves me completely unable to
   tell what the colorscheme was trying to do.  See |csapprox-+gui| for some
-  potential workarounds if your distribution doesn't provide a Vim with +gui.
+  potential workarounds if your distribution doesn't provide a Vim with +gui
+  and you can't upgrade to a modern vim.
 
 User intervention is sometimes required for information about the terminal.
 
@@ -583,11 +588,42 @@ kterm (as of version 6.2.0)
 ==============================================================================
 7. Changelog                                              *csapprox-changelog*
 
+ 4.00   14 Sep 2012   Fix CSApprox to not fail in vim 7.3 if not +gui, now
+                      that vim behaves properly even without +gui
+
+                      Provide the |:CSApprox| command to re-run CSApprox's
+                      approximation algorithm even if the colorscheme hasn't
+                      changed - useful for when the user has tweaked some
+                      colors manually.
+
+                      Better handling for the |inverse| (aka reverse) attribute
+                      for terminals that actually support it - and add the 
+                      g:CSApprox_fake_reverse config variable to allow
+                      switching back to the old behavior for terminals that
+                      don't support real reverse video.
+
+                      Fix an issue where CSApprox would unconditionally leave
+                      'background' set to "light" - now it will leave
+                      'background' unchanged when it runs.
+
+                      Change the handling for Konsole to use the xterm palette
+                      by for KDE versions >= 2.2.0 - Konsole itself was
+                      changed to drop its old, slightly incompatible palette
+                      in KDE 2.2.0
+
+                      Fix a minor issue where running vim in recovery mode
+                      with |-r| would result in a complaint from CSApprox that
+                      the terminal didn't have enough colors even when it did.
+
+                      Fix an issue where, even if CSApprox had been disabled
+                      by setting |g:CSApprox_loaded|, a CSApprox error message
+                      could still be displayed.
+
  3.50   01 Apr 2009   Fix a major regression that prevented the Eterm and
                       Konsole colors from being correctly snapshotted
 
                       Fix a related bug causing incorrect terminal colors
-                      after calling :CSApproxSnapshot
+                      after calling |:CSApproxSnapshot|
 
                       Fix a bug causing black to be used instead of dark grey
 
@@ -607,12 +643,12 @@ kterm (as of version 6.2.0)
                       light of the above change
 
  3.05   31 Jan 2009   Fix a harmless "Undefined variable" error in
-                      :CSApproxSnapshot
+                      |:CSApproxSnapshot|
 
                       Fix a behavioral bug when dumping out colors defined
                       external to the scheme.
 
- 3.00   21 Jan 2009   Update the docs for better info on :CSApproxSnapshot
+ 3.00   21 Jan 2009   Update the docs for better info on |:CSApproxSnapshot|
 
                       Allow snapshotted schemes to work on Vim 6, and work
                       properly in Konsole and Eterm (thanks David Majnemer!)
@@ -624,7 +660,7 @@ kterm (as of version 6.2.0)
                       to run, either before or after the approximation
                       algorithm is run, for all schemes or one specific one.
 
-                      Also rewrite :CSApproxSnapshot to be more maintainable
+                      Also rewrite |:CSApproxSnapshot| to be more maintainable
                       and less of a hack, and fix several bugs that it
                       contained.
 
@@ -647,7 +683,8 @@ always get the short end of the stick.  He'd like to be notified of any
 problems you find - after all, he took the time to write all this lovely
 documentation, and this plugin, which took more time than you could possibly
 imagine to get working transparently for every colorscheme he could get his
-hands on.  You can contact him with any problems or praises at mjw@drexel.edu
+hands on.  You can contact him with any problems or praises at
+godlygeek@gmail.com
 
 ==============================================================================
 vim:tw=78:fo=tcq2:isk=!-~,^*,^\|,^\":ts=8:ft=help:norl:
