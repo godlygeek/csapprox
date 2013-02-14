@@ -61,7 +61,7 @@ elseif !has('gui') && v:version < 703
   " Warn unless the user set g:CSApprox_verbose_level to zero.
   if get(g:, 'CSApprox_verbose_level', 1)
     echomsg "CSApprox needs gui support - not loading."
-    echomsg "  See :help |csapprox-+gui| for possible workarounds."
+    echomsg "  See :help csapprox-+gui for possible workarounds."
   endif
 
   finish
