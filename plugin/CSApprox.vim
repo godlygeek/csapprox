@@ -1,4 +1,4 @@
-" CSApprox:    Make gvim-only colorschemes Just Work terminal vim
+/" CSApprox:    Make gvim-only colorschemes Just Work terminal vim
 " Maintainer:  Matthew Wozniski (godlygeek@gmail.com)
 " Date:        Fri, 14 Sep 2012 01:12:13 -0400
 " Version:     4.00
