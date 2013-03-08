@@ -561,6 +561,15 @@ GNU Screen (screen):
     and the colors supported by the real terminal to the best of its ability,
     in much the same way as CSApprox maps between GUI and terminal colors.
 
+                                                             *csapprox-fbterm*
+FbTerm (fbterm):
+    256 colors; same palette as xterm
+    Note that fbterm uses different escape sequences than all the other
+    256-color terminals listed here, meaning that you must install an fbterm
+    terminfo entry (one is distributed with the fbterm source) and you must
+    use TERM=fbterm - using TERM=xterm-256color won't work, and neither will
+    fbterm's default $TERM setting ("linux").
+
                                                       *csapprox-terminals-bad*
 -------------------------------- Bad Terminals -------------------------------
 This is a list of terminals known _not_ to have high color support.  If any of
