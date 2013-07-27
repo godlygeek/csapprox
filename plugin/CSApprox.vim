@@ -378,6 +378,11 @@ endfunction
 
 " {>1} Top-level control
 
+" If the normal group doesn't exist yet, create it
+if hlID('Normal') == 0
+  hi clear Normal
+endif
+
 " Cache the highlight ID of the normal group; it's used often and won't change
 let s:hlid_normal = hlID('Normal')
 
