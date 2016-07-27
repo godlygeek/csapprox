@@ -559,6 +559,13 @@ endfunction
 " highlights and sets the cterm colors to match the gui colors for all those
 " highlights (unless the colorscheme was already high-color).
 function! s:CSApproxImpl()
+  " Return if the new terminal 24-bit color support is turned on.
+  if has('termguicolors') && &termguicolors
+    if &verbose >= 2
+      echomsg "CSApprox disabled because 'termguicolors' is on"
+    endif
+    return
+  endif
   " Return if not running in an 88/256 color terminal
   if &t_Co != 256 && &t_Co != 88
     if &verbose && &t_Co != ''
