@@ -139,6 +139,21 @@ function! s:Highlights(modes)
     endfor
   endwhile
 
+  if v:version > 800 || (v:version == 800 && has("patch201"))
+    " Work around a vim bug if a builtin highlight group has been cleared
+    for group in csapprox#builtin_groups#BuiltinHighlightGroups()
+      if hlID(group) != hlID(synIDattr(hlID(group), 'name'))
+        let i = hlID(group)
+        let rv[i].name = group
+        for where in a:modes
+          for attr in s:PossibleAttributes() + [ "bg", "fg", "sp" ]
+            let rv[i][where][attr] = ''
+          endfor
+        endfor
+      endif
+    endfor
+  endif
+
   return rv
 endfunction
 
